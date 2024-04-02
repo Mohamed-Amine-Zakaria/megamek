@@ -22,6 +22,7 @@ package megamek.common;
 import megamek.client.ui.swing.util.PlayerColour;
 import megamek.common.icons.Camouflage;
 import megamek.common.options.OptionsConstants;
+import megamek.server.rating.PlayerRating;
 
 import java.util.Objects;
 import java.util.Vector;
@@ -43,6 +44,9 @@ public final class Player extends TurnOrdered {
     public static final String[] TEAM_NAMES = {"No Team", "Team 1", "Team 2", "Team 3", "Team 4", "Team 5"};
 
     private transient IGame game;
+
+    private PlayerRating rating;
+
 
     private String name;
     private String email;
@@ -103,7 +107,15 @@ public final class Player extends TurnOrdered {
     public Player(int id, String name) {
         this.name = name;
         this.id = id;
+        this.rating = new PlayerRating(1500);
+
     }
+
+
+    public PlayerRating getRating() {
+        return rating;
+    }
+
     //endregion Constructors
 
     public Vector<Minefield> getMinefields() {
