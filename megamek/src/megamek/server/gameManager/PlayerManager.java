@@ -113,7 +113,7 @@ public class PlayerManager {
                 gameManager.communicationManager.sendGhostSkipMessage(player, gameManager);
             }
         } else {
-            gameManager.checkReady();
+            gameManager.gameStateManager.checkReady(gameManager);
         }
 
         // notify other players

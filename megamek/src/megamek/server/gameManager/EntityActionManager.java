@@ -110,7 +110,7 @@ public class EntityActionManager {
 
         // This entity's turn is over.
         // N.B. if the entity fell, a *new* turn has already been added.
-        gameManager.endCurrentTurn(entity);
+        gameManager.gameStateManager.endCurrentTurn(entity, gameManager);
     }
 
     /**
@@ -410,7 +410,7 @@ public class EntityActionManager {
             gameManager.updateVisibilityIndicator(null);
         }
 
-        gameManager.endCurrentTurn(entity);
+        gameManager.gameStateManager.endCurrentTurn(entity, gameManager);
     }
 
     /**
@@ -699,7 +699,7 @@ public class EntityActionManager {
             gameManager.updateVisibilityIndicator(null);
         }
 
-        gameManager.endCurrentTurn(entity);
+        gameManager.gameStateManager.endCurrentTurn(entity, gameManager);
     }
 
     /**

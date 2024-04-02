@@ -85,7 +85,7 @@ public class VictoryCommand extends ServerCommand {
         } else {
             server.sendServerChat(getDeclareTeam(player.getName()));
         }
-        gameManager.forceVictory(player);
+        gameManager.gameStateManager.forceVictory(player, gameManager);
     }
 
 }

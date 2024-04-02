@@ -44,10 +44,10 @@ public class SkipCommand extends ServerCommand {
             return;
         }
 
-        if (gameManager.isTurnSkippable()) {
+        if (gameManager.gameStateManager.isTurnSkippable(gameManager)) {
             server.sendServerChat(server.getPlayer(connId).getName()
                     + " has issued the skip command...");
-            gameManager.skipCurrentTurn();
+            gameManager.gameStateManager.skipCurrentTurn(gameManager);
         } else {
             server.sendServerChat("/skip : skip failed.");
         }

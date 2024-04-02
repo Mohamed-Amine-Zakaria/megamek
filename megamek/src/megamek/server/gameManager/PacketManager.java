@@ -418,7 +418,7 @@ public class PacketManager {
             case PLAYER_READY:
                 gameManager.communicationManager.receivePlayerDone(packet, connId, gameManager);
                 gameManager.communicationManager.send(createPlayerDonePacket(connId, gameManager));
-                gameManager.checkReady();
+                gameManager.gameStateManager.checkReady(gameManager);
                 break;
             case PRINCESS_SETTINGS:
                 if (player != null) {

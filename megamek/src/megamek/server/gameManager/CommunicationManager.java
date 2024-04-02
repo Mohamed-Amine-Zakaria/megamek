@@ -296,7 +296,7 @@ public class CommunicationManager {
                                     + gameManager.game.getPlayer(playerId).getName(),
                             SpecialHexDisplay.SHD_OBSCURED_TEAM));
         }
-        gameManager.endCurrentTurn(null);
+        gameManager.gameStateManager.endCurrentTurn(null, gameManager);
     }
 
     /**
@@ -317,7 +317,7 @@ public class CommunicationManager {
 
         // looks like mostly everything's okay
         gameManager.processDeployMinefields(minefields);
-        gameManager.endCurrentTurn(null);
+        gameManager.gameStateManager.endCurrentTurn(null, gameManager);
     }
 
     /**
@@ -359,7 +359,7 @@ public class CommunicationManager {
         }
 
         gameManager.entityUpdate(entity.getId());
-        gameManager.endCurrentTurn(entity);
+        gameManager.gameStateManager.endCurrentTurn(entity, gameManager);
     }
 
     /**
@@ -1166,7 +1166,7 @@ public class CommunicationManager {
             for (Integer entityId : ids) {
                 final Entity entity = gameManager.game.getEntity(entityId);
                 gameManager.game.removeEntity(entityId, IEntityRemovalConditions.REMOVE_NEVER_JOINED);
-                gameManager.endCurrentTurn(entity);
+                gameManager.gameStateManager.endCurrentTurn(entity, gameManager);
             }
         }
     }
@@ -1206,7 +1206,7 @@ public class CommunicationManager {
             player.setDone(true);
         }
 
-        gameManager.checkReady();
+        gameManager.gameStateManager.checkReady(gameManager);
     }
 
     /**
@@ -1420,7 +1420,7 @@ public class CommunicationManager {
 
         // Clear the list of pending units and move to the next turn.
         gameManager.game.resetActions();
-        gameManager.changeToNextTurn(connId);
+        gameManager.gameStateManager.changeToNextTurn(connId, gameManager);
     }
 
     /**
