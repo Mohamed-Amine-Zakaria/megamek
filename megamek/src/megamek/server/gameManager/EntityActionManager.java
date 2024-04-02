@@ -155,11 +155,11 @@ public class EntityActionManager {
             // If we removed a unit during the movement phase that hasn't moved, remove its turn.
             if (gameManager.getGame().getPhase().isMovement() && entity.isSelectableThisTurn()) {
                 gameManager.getGame().removeTurnFor(entity);
-                gameManager.send(gameManager.createTurnVectorPacket());
+                gameManager.communicationManager.send(gameManager.packetManager.createTurnVectorPacket(gameManager));
             }
             gameManager.entityUpdate(entity.getId());
             gameManager.game.removeEntity(entity.getId(), condition);
-            gameManager.send(gameManager.createRemoveEntityPacket(entity.getId(), condition));
+            gameManager.communicationManager.send(gameManager.packetManager.createRemoveEntityPacket(entity.getId(), condition, gameManager));
         }
     }
 
@@ -226,7 +226,7 @@ public class EntityActionManager {
 
             gameManager.entityUpdate(entity.getId());
             gameManager.game.removeEntity(entity.getId(), condition);
-            gameManager.send(gameManager.createRemoveEntityPacket(entity.getId(), condition));
+            gameManager.communicationManager.send(gameManager.packetManager.createRemoveEntityPacket(entity.getId(), condition, gameManager));
         }
 
         // do some housekeeping on all the remaining
@@ -280,7 +280,7 @@ public class EntityActionManager {
         }
 
         gameManager.game.clearIlluminatedPositions();
-        gameManager.send(new Packet(PacketCommand.CLEAR_ILLUM_HEXES));
+        gameManager.communicationManager.send(new Packet(PacketCommand.CLEAR_ILLUM_HEXES));
     }
 
     /**
@@ -397,8 +397,8 @@ public class EntityActionManager {
                     "Server got invalid attack packet from Connection %s, Entity %s, %s Turn",
                     connId, ((entity == null) ? "null" : entity.getShortName()),
                     ((turn == null) ? "null" : "invalid")));
-            gameManager.send(connId, gameManager.createTurnVectorPacket());
-            gameManager.send(connId, gameManager.createTurnIndexPacket((turn == null) ? Player.PLAYER_NONE : turn.getPlayerNum()));
+            gameManager.communicationManager.send(connId, gameManager.packetManager.createTurnVectorPacket(gameManager));
+            gameManager.communicationManager.send(connId, gameManager.packetManager.createTurnIndexPacket((turn == null) ? Player.PLAYER_NONE : turn.getPlayerNum(), gameManager));
             return;
         }
 
@@ -469,7 +469,7 @@ public class EntityActionManager {
                             // immediately after the attack declaration.
                             gameManager.game.insertNextTurn(new GameTurn.TriggerAPPodTurn(target.getOwnerId(),
                                     target.getId()));
-                            gameManager.send(gameManager.createTurnVectorPacket());
+                            gameManager.communicationManager.send(gameManager.packetManager.createTurnVectorPacket(gameManager));
 
                             // We can stop looking.
                             break;
@@ -486,7 +486,7 @@ public class EntityActionManager {
                             // immediately after the attack declaration.
                             gameManager.game.insertNextTurn(new GameTurn.TriggerBPodTurn(target.getOwnerId(),
                                     target.getId(), weaponName));
-                            gameManager.send(gameManager.createTurnVectorPacket());
+                            gameManager.communicationManager.send(gameManager.packetManager.createTurnVectorPacket(gameManager));
 
                             // We can stop looking.
                             break;
@@ -520,7 +520,7 @@ public class EntityActionManager {
                     // If defender is able, add a turn to declare counterattack
                     if (!def.isImmobile()) {
                         gameManager.game.insertNextTurn(new GameTurn.CounterGrappleTurn(def.getOwnerId(), def.getId()));
-                        gameManager.send(gameManager.createTurnVectorPacket());
+                        gameManager.communicationManager.send(gameManager.packetManager.createTurnVectorPacket(gameManager));
                     }
                 }
             }
@@ -591,7 +591,7 @@ public class EntityActionManager {
                 // If we added new hexes, send them to all players.
                 // These are spotlights at night, you know they're there.
                 if (hexesAdded) {
-                    gameManager.send(gameManager.createIlluminatedHexesPacket());
+                    gameManager.communicationManager.send(gameManager.packetManager.createIlluminatedHexesPacket(gameManager));
                 }
             }
         }
@@ -619,19 +619,19 @@ public class EntityActionManager {
         }
         gameManager.entityUpdate(entity.getId());
 
-        Packet p = gameManager.createAttackPacket(vector, 0);
+        Packet p = gameManager.packetManager.createAttackPacket(vector, 0);
         if (gameManager.getGame().getPhase().isSimultaneous(gameManager.getGame())) {
             // Update attack only to player who declared it & observers
             for (Player player : gameManager.game.getPlayersVector()) {
                 if (player.canIgnoreDoubleBlind() || player.isObserver()
                         || (entity.getOwnerId() == player.getId())) {
-                    gameManager.send(player.getId(), p);
+                    gameManager.communicationManager.send(player.getId(), p);
                 }
             }
         } else {
             // update all players on the attacks. Don't worry about pushes being
             // a "charge" attack. It doesn't matter to the client.
-            gameManager.send(p);
+            gameManager.communicationManager.send(p);
         }
     }
 
@@ -680,8 +680,8 @@ public class EntityActionManager {
                 msg += ", Entity was null!";
             }
             LogManager.getLogger().error(msg);
-            gameManager.send(connId, gameManager.createTurnVectorPacket());
-            gameManager.send(connId, gameManager.createTurnIndexPacket(turn.getPlayerNum()));
+            gameManager.communicationManager.send(connId, gameManager.packetManager.createTurnVectorPacket(gameManager));
+            gameManager.communicationManager.send(connId, gameManager.packetManager.createTurnIndexPacket(turn.getPlayerNum(), gameManager));
             return;
         }
 
@@ -739,8 +739,8 @@ public class EntityActionManager {
                 msg += ", Entity was null!";
             }
             LogManager.getLogger().error(msg);
-            gameManager.send(connId, gameManager.createTurnVectorPacket());
-            gameManager.send(connId, gameManager.createTurnIndexPacket(connId));
+            gameManager.communicationManager.send(connId, gameManager.packetManager.createTurnVectorPacket(gameManager));
+            gameManager.communicationManager.send(connId, gameManager.packetManager.createTurnIndexPacket(connId, gameManager));
             return;
         }
 
@@ -757,7 +757,7 @@ public class EntityActionManager {
                 loaded.getOwnerId(), loaded.getId()), gameManager.game.getTurnIndex() - 1);
         //game.insertNextTurn(new GameTurn.SpecificEntityTurn(
         //        loaded.getOwnerId(), loaded.getId()));
-        gameManager.send(gameManager.createTurnVectorPacket());
+        gameManager.communicationManager.send(gameManager.packetManager.createTurnVectorPacket(gameManager));
     }
 
     /**
@@ -892,10 +892,10 @@ public class EntityActionManager {
         Building bldg = gameManager.game.getBoard().getBuildingAt(entity.getPosition());
         if ((bldg != null)) {
             if (bldg.rollBasement(entity.getPosition(), gameManager.game.getBoard(), gameManager.vPhaseReport)) {
-                gameManager.sendChangedHex(entity.getPosition());
+                gameManager.communicationManager.sendChangedHex(entity.getPosition(), gameManager);
                 Vector<Building> buildings = new Vector<>();
                 buildings.add(bldg);
-                gameManager.sendChangedBuildings(buildings);
+                gameManager.communicationManager.sendChangedBuildings(buildings, gameManager);
             }
             boolean collapse = gameManager.checkBuildingCollapseWhileMoving(bldg, entity, entity.getPosition());
             if (collapse) {

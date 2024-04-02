@@ -227,7 +227,7 @@ public class ServerLobbyHelper {
         }
         
         if (!changedForces.isEmpty()) {
-            gameManager.send(createForceUpdatePacket(changedForces));
+            gameManager.communicationManager.send(createForceUpdatePacket(changedForces));
         }
     }
     
@@ -254,7 +254,7 @@ public class ServerLobbyHelper {
         game.getForces().correct();
         correctLoading(game);
         correctC3Connections(game);
-        gameManager.send(gameManager.createFullEntitiesPacket());
+        gameManager.communicationManager.send(gameManager.packetManager.createFullEntitiesPacket(gameManager));
     }
     
     /** 
@@ -290,7 +290,7 @@ public class ServerLobbyHelper {
         forces.correct();
         correctLoading(game);
         correctC3Connections(game);
-        gameManager.send(gameManager.createFullEntitiesPacket());
+        gameManager.communicationManager.send(gameManager.packetManager.createFullEntitiesPacket(gameManager));
     }
     
     /** 
@@ -312,10 +312,10 @@ public class ServerLobbyHelper {
         }
         if (forcesClone.isValid()) {
             game.setForces(forcesClone);
-            gameManager.send(createForceUpdatePacket(forceList));
+            gameManager.communicationManager.send(createForceUpdatePacket(forceList));
         } else {
             LogManager.getLogger().warn("Invalid forces update received.");
-            gameManager.send(gameManager.createFullEntitiesPacket());
+            gameManager.communicationManager.send(gameManager.packetManager.createFullEntitiesPacket(gameManager));
         }
     }
     
@@ -347,9 +347,9 @@ public class ServerLobbyHelper {
         correctLoading(game);
         correctC3Connections(game);
         
-        gameManager.send(gameManager.createFullEntitiesPacket());
+        gameManager.communicationManager.send(gameManager.packetManager.createFullEntitiesPacket(gameManager));
         for (Player player: serverPlayers) {
-            gameManager.transmitPlayerUpdate(player);
+            gameManager.communicationManager.transmitPlayerUpdate(player);
         }
     }
 
@@ -425,7 +425,7 @@ public class ServerLobbyHelper {
             changedForces.addAll(game.getForces().removeEntityFromForces(entities));
             changedEntities.addAll(entities);
         }
-        gameManager.send(createForceUpdatePacket(changedForces, changedEntities));
+        gameManager.communicationManager.send(createForceUpdatePacket(changedForces, changedEntities));
     }
     
     /**
@@ -446,7 +446,7 @@ public class ServerLobbyHelper {
         for (var entity: entities) {
             game.getForces().addEntity(game.getEntity(entity.getId()), newId);
         }
-        gameManager.send(gameManager.createFullEntitiesPacket());
+        gameManager.communicationManager.send(gameManager.packetManager.createFullEntitiesPacket(gameManager));
     }
 
     /**

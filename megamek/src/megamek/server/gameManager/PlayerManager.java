@@ -26,22 +26,22 @@ public class PlayerManager {
 
     public void setGameMaster(Player player, boolean gameMaster, GameManager gameManager) {
         player.setGameMaster(gameMaster);
-        gameManager.transmitPlayerUpdate(player);
-        gameManager.sendServerChat(player.getName() + " set GameMaster: " + player.getGameMaster());
+        gameManager.communicationManager.transmitPlayerUpdate(player);
+        gameManager.communicationManager.sendServerChat(player.getName() + " set GameMaster: " + player.getGameMaster());
     }
 
     void processTeamChangeRequest(GameManager gameManager) {
         if (gameManager.playerChangingTeam != null) {
             gameManager.playerChangingTeam.setTeam(gameManager.requestedTeam);
             gameManager.getGame().setupTeams();
-            gameManager.transmitPlayerUpdate(gameManager.playerChangingTeam);
+            gameManager.communicationManager.transmitPlayerUpdate(gameManager.playerChangingTeam);
             String teamString = "Team " + gameManager.requestedTeam + "!";
             if (gameManager.requestedTeam == Player.TEAM_UNASSIGNED) {
                 teamString = " unassigned!";
             } else if (gameManager.requestedTeam == Player.TEAM_NONE) {
                 teamString = " lone wolf!";
             }
-            gameManager.sendServerChat(gameManager.playerChangingTeam.getName() + " has changed teams to " + teamString);
+            gameManager.communicationManager.sendServerChat(gameManager.playerChangingTeam.getName() + " has changed teams to " + teamString);
             gameManager.playerChangingTeam = null;
         }
         gameManager.changePlayersTeam = false;
@@ -71,7 +71,7 @@ public class PlayerManager {
         gameManager.game.getForces().correct();
         ServerLobbyHelper.correctLoading(gameManager.game);
         ServerLobbyHelper.correctC3Connections(gameManager.game);
-        gameManager.send(gameManager.createFullEntitiesPacket());
+        gameManager.communicationManager.send(gameManager.packetManager.createFullEntitiesPacket(gameManager));
     }
 
     void disconnectAPlayer(Player player, GameManager gameManager) {
@@ -95,7 +95,7 @@ public class PlayerManager {
         // This fixes Bug 3399000 without reintroducing 1225949
         if (gameManager.getGame().getPhase().isVictory() || gameManager.getGame().getPhase().isLounge() || player.isObserver()) {
             gameManager.getGame().removePlayer(player.getId());
-            gameManager.send(new Packet(PacketCommand.PLAYER_REMOVE, player.getId()));
+            gameManager.communicationManager.send(new Packet(PacketCommand.PLAYER_REMOVE, player.getId()));
             // Prevent situation where all players but the disconnected one
             // are done, and the disconnecting player causes the game to start
             if (gameManager.getGame().getPhase().isLounge()) {
@@ -104,20 +104,20 @@ public class PlayerManager {
         } else {
             player.setGhost(true);
             player.setDone(true);
-            gameManager.transmitPlayerUpdate(player);
+            gameManager.communicationManager.transmitPlayerUpdate(player);
         }
 
         // make sure the game advances
         if (gameManager.getGame().getPhase().hasTurns() && (null != gameManager.getGame().getTurn())) {
             if (gameManager.getGame().getTurn().isValid(player.getId(), gameManager.getGame())) {
-                gameManager.sendGhostSkipMessage(player);
+                gameManager.communicationManager.sendGhostSkipMessage(player, gameManager);
             }
         } else {
             gameManager.checkReady();
         }
 
         // notify other players
-        gameManager.sendServerChat(player.getName() + " disconnected.");
+        gameManager.communicationManager.sendServerChat(player.getName() + " disconnected.");
 
         // log it
         LogManager.getLogger().info("s: removed player " + player.getName());
@@ -165,7 +165,7 @@ public class PlayerManager {
         delEntities.forEach(e -> gameManager.game.removeEntity(e.getId(), IEntityRemovalConditions.REMOVE_NEVER_JOINED));
 
         // send full update
-        gameManager.send(gameManager.createFullEntitiesPacket());
+        gameManager.communicationManager.send(gameManager.packetManager.createFullEntitiesPacket(gameManager));
     }
 
     void changeTeam(int team, Player player, GameManager gameManager) {

@@ -43,7 +43,7 @@ public class GameStateManager {
 
         if (phase.isPlayable(gameManager.getGame())) {
             // tell the players about the new phase
-            gameManager.send(new Packet(PacketCommand.PHASE_CHANGE, phase));
+            gameManager.communicationManager.send(new Packet(PacketCommand.PHASE_CHANGE, phase));
 
             // post phase change stuff
             gameManager.gameStateManager.executePhase(phase, gameManager);
@@ -68,7 +68,7 @@ public class GameStateManager {
                 changePhase(GamePhase.SET_ARTILLERY_AUTOHIT_HEXES, gameManager);
                 break;
             case SET_ARTILLERY_AUTOHIT_HEXES:
-                gameManager.sendSpecialHexDisplayPackets();
+                gameManager.communicationManager.sendSpecialHexDisplayPackets(gameManager);
                 Enumeration<Player> e = gameManager.game.getPlayers();
                 boolean mines = false;
                 while (e.hasMoreElements() && !mines) {
@@ -152,7 +152,7 @@ public class GameStateManager {
                     // just the header, so we'll add the <nothing> label
                     gameManager.addReport(new Report(1205, Report.PUBLIC));
                     gameManager.game.addReports(gameManager.vPhaseReport);
-                    gameManager.sendReport();
+                    gameManager.communicationManager.sendReport(gameManager);
                     changePhase(GamePhase.OFFBOARD, gameManager);
                 }
                 break;
@@ -186,7 +186,7 @@ public class GameStateManager {
                 } else {
                     // just the header, so we'll add the <nothing> label
                     gameManager.addReport(new Report(1205, Report.PUBLIC));
-                    gameManager.sendReport();
+                    gameManager.communicationManager.sendReport(gameManager);
                     gameManager.game.addReports(gameManager.vPhaseReport);
                     changePhase(GamePhase.PHYSICAL, gameManager);
                 }
@@ -212,7 +212,7 @@ public class GameStateManager {
                     // just the header, so we'll add the <nothing> label
                     gameManager.addReport(new Report(1205, Report.PUBLIC));
                     gameManager.game.addReports(gameManager.vPhaseReport);
-                    gameManager.sendReport();
+                    gameManager.communicationManager.sendReport(gameManager);
                     changePhase(GamePhase.END, gameManager);
                 }
                 break;
@@ -232,15 +232,15 @@ public class GameStateManager {
                     // just the header, so we'll add the <nothing> label
                     gameManager.vPhaseReport.addElement(new Report(1205, Report.PUBLIC));
                     gameManager.game.addReports(gameManager.vPhaseReport);
-                    gameManager.sendReport();
+                    gameManager.communicationManager.sendReport(gameManager);
                     changePhase(GamePhase.PREMOVEMENT, gameManager);
                 }
 
-                gameManager.sendSpecialHexDisplayPackets();
+                gameManager.communicationManager.sendSpecialHexDisplayPackets(gameManager);
                 for (Enumeration<Player> i = gameManager.game.getPlayers(); i.hasMoreElements(); ) {
                     Player player = i.nextElement();
                     int connId = player.getId();
-                    gameManager.send(connId, gameManager.createArtilleryPacket(player));
+                    gameManager.communicationManager.send(connId, gameManager.packetManager.createArtilleryPacket(player, gameManager));
                 }
 
                 break;
@@ -254,7 +254,7 @@ public class GameStateManager {
                 for (Enumeration<Player> i = gameManager.game.getPlayers(); i.hasMoreElements(); ) {
                     Player player = i.nextElement();
                     int connId = player.getId();
-                    gameManager.send(connId, gameManager.createArtilleryPacket(player));
+                    gameManager.communicationManager.send(connId, gameManager.packetManager.createArtilleryPacket(player, gameManager));
                 }
                 gameManager.applyBuildingDamage();
                 gameManager.checkForPSRFromDamage();
@@ -263,8 +263,8 @@ public class GameStateManager {
                 gameManager.cleanupDestroyedNarcPods();
                 gameManager.checkForFlawedCooling();
 
-                gameManager.sendSpecialHexDisplayPackets();
-                gameManager.sendTagInfoUpdates();
+                gameManager.communicationManager.sendSpecialHexDisplayPackets(gameManager);
+                gameManager.communicationManager.sendTagInfoUpdates(gameManager);
 
                 // check reports
                 if (gameManager.vPhaseReport.size() > 1) {
@@ -274,12 +274,12 @@ public class GameStateManager {
                     // just the header, so we'll add the <nothing> label
                     gameManager.addReport(new Report(1205, Report.PUBLIC));
                     gameManager.game.addReports(gameManager.vPhaseReport);
-                    gameManager.sendReport();
+                    gameManager.communicationManager.sendReport(gameManager);
                     changePhase(GamePhase.PREFIRING, gameManager);
                 }
                 break;
             case OFFBOARD_REPORT:
-                gameManager.sendSpecialHexDisplayPackets();
+                gameManager.communicationManager.sendSpecialHexDisplayPackets(gameManager);
                 changePhase(GamePhase.PREFIRING, gameManager);
                 break;
             case TARGETING_REPORT:
@@ -301,7 +301,7 @@ public class GameStateManager {
                     // the <nothing> label
                     gameManager.addReport(new Report(1205, Report.PUBLIC));
                     gameManager.game.addReports(gameManager.vPhaseReport);
-                    gameManager.sendReport();
+                    gameManager.communicationManager.sendReport(gameManager);
                     if (victory) {
                         changePhase(GamePhase.VICTORY, gameManager);
                     } else {
@@ -325,7 +325,7 @@ public class GameStateManager {
             case VICTORY:
                 GameVictoryEvent gve = new GameVictoryEvent(gameManager, gameManager.game);
                 gameManager.game.processGameEvent(gve);
-                gameManager.transmitGameVictoryEventToAll();
+                gameManager.communicationManager.transmitGameVictoryEventToAll(gameManager);
                 gameManager.resetGame();
                 break;
             default:
@@ -360,9 +360,9 @@ public class GameStateManager {
                 gameManager.game.setupTeams();
                 gameManager.applyBoardSettings();
                 gameManager.game.getPlanetaryConditions().determineWind();
-                gameManager.send(gameManager.createPlanetaryConditionsPacket());
+                gameManager.communicationManager.send(gameManager.packetManager.createPlanetaryConditionsPacket(gameManager));
                 // transmit the board to everybody
-                gameManager.send(gameManager.createBoardPacket());
+                gameManager.communicationManager.send(gameManager.packetManager.createBoardPacket(gameManager));
                 gameManager.game.setupRoundDeployment();
                 gameManager.game.setVictoryContext(new HashMap<>());
                 gameManager.game.createVictoryConditions();
@@ -406,22 +406,22 @@ public class GameStateManager {
                 MapSettings mapSettings = gameManager.game.getMapSettings();
                 mapSettings.setBoardsAvailableVector(ServerBoardHelper.scanForBoards(mapSettings));
                 mapSettings.setNullBoards(GameManager.DEFAULT_BOARD);
-                gameManager.send(gameManager.createMapSettingsPacket());
-                gameManager.send(gameManager.createMapSizesPacket());
+                gameManager.communicationManager.send(gameManager.communicationManager.packetManager.createMapSettingsPacket(gameManager));
+                gameManager.communicationManager.send(gameManager.packetManager.createMapSizesPacket(gameManager));
                 gameManager.playerManager.checkForObservers(gameManager);
-                gameManager.transmitAllPlayerUpdates();
+                gameManager.communicationManager.transmitAllPlayerUpdates(gameManager);
                 break;
             case INITIATIVE:
                 // remove the last traces of last round
                 gameManager.game.handleInitiativeCompensation();
                 gameManager.game.resetActions();
                 gameManager.game.resetTagInfo();
-                gameManager.sendTagInfoReset();
+                gameManager.communicationManager.sendTagInfoReset(gameManager);
                 gameManager.clearReports();
                 gameManager.resetEntityRound();
                 gameManager.entityActionManager.resetEntityPhase(phase, gameManager);
                 gameManager.playerManager.checkForObservers(gameManager);
-                gameManager.transmitAllPlayerUpdates();
+                gameManager.communicationManager.transmitAllPlayerUpdates(gameManager);
 
                 // roll 'em
                 gameManager.resetActivePlayersDone();
@@ -455,7 +455,7 @@ public class GameStateManager {
                 break;
             case DEPLOY_MINEFIELDS:
                 gameManager.playerManager.checkForObservers(gameManager);
-                gameManager.transmitAllPlayerUpdates();
+                gameManager.communicationManager.transmitAllPlayerUpdates(gameManager);
                 gameManager.resetActivePlayersDone();
                 gameManager.setIneligible(phase);
 
@@ -472,12 +472,12 @@ public class GameStateManager {
                 gameManager.game.resetTurnIndex();
 
                 // send turns to all players
-                gameManager.send(gameManager.createTurnVectorPacket());
+                gameManager.communicationManager.send(gameManager.packetManager.createTurnVectorPacket(gameManager));
                 break;
             case SET_ARTILLERY_AUTOHIT_HEXES:
                 gameManager.entityActionManager.deployOffBoardEntities(gameManager);
                 gameManager.playerManager.checkForObservers(gameManager);
-                gameManager.transmitAllPlayerUpdates();
+                gameManager.communicationManager.transmitAllPlayerUpdates(gameManager);
                 gameManager.resetActivePlayersDone();
                 gameManager.setIneligible(phase);
 
@@ -510,7 +510,7 @@ public class GameStateManager {
                 gameManager.game.resetTurnIndex();
 
                 // send turns to all players
-                gameManager.send(gameManager.createTurnVectorPacket());
+                gameManager.communicationManager.send(gameManager.packetManager.createTurnVectorPacket(gameManager));
                 break;
             case PREMOVEMENT:
             case MOVEMENT:
@@ -536,7 +536,7 @@ public class GameStateManager {
                 }
                 gameManager.entityActionManager.resetEntityPhase(phase, gameManager);
                 gameManager.playerManager.checkForObservers(gameManager);
-                gameManager.transmitAllPlayerUpdates();
+                gameManager.communicationManager.transmitAllPlayerUpdates(gameManager);
                 gameManager.resetActivePlayersDone();
                 gameManager.setIneligible(phase);
                 gameManager.determineTurnOrder(phase);
@@ -562,11 +562,11 @@ public class GameStateManager {
                 gameManager.resolveEmergencyCoolantSystem();
                 gameManager.checkForSuffocation();
                 gameManager.game.getPlanetaryConditions().determineWind();
-                gameManager.send(gameManager.createPlanetaryConditionsPacket());
+                gameManager.communicationManager.send(gameManager.packetManager.createPlanetaryConditionsPacket(gameManager));
 
                 gameManager.applyBuildingDamage();
                 gameManager.addReport(gameManager.game.ageFlares());
-                gameManager.send(gameManager.createFlarePacket());
+                gameManager.communicationManager.send(gameManager.packetManager.createFlarePacket(gameManager));
                 gameManager.resolveAmmoDumps();
                 gameManager.resolveCrewWakeUp();
                 gameManager.resolveConsoleCrewSwaps();
@@ -587,10 +587,10 @@ public class GameStateManager {
                 for (DynamicTerrainProcessor tp : gameManager.terrainProcessors) {
                     tp.doEndPhaseChanges(gameManager.vPhaseReport);
                 }
-                gameManager.sendChangedHexes(gameManager.hexUpdateSet);
+                gameManager.communicationManager.sendChangedHexes(gameManager.hexUpdateSet, gameManager);
 
                 gameManager.playerManager.checkForObservers(gameManager);
-                gameManager.transmitAllPlayerUpdates();
+                gameManager.communicationManager.transmitAllPlayerUpdates(gameManager);
                 gameManager.entityAllUpdate();
                 break;
             case INITIATIVE_REPORT: {
@@ -603,7 +603,7 @@ public class GameStateManager {
             case PHYSICAL_REPORT:
             case END_REPORT:
                 gameManager.resetActivePlayersDone();
-                gameManager.sendReport();
+                gameManager.communicationManager.sendReport(gameManager);
                 gameManager.entityAllUpdate();
                 if (gameManager.game.getOptions().booleanOption(OptionsConstants.BASE_PARANOID_AUTOSAVE)) {
                     gameManager.gameStateManager.autoSave(gameManager);
@@ -613,8 +613,8 @@ public class GameStateManager {
                 gameManager.ratingManager.updatePlayersRating(gameManager);
                 gameManager.resetPlayersDone();
                 gameManager.clearReports();
-                gameManager.send(gameManager.createAllReportsPacket());
-                gameManager.prepareVictoryReport();
+                gameManager.communicationManager.send(gameManager.packetManager.createAllReportsPacket(gameManager));
+                gameManager.reportManager.prepareVictoryReport(gameManager);
                 gameManager.game.addReports(gameManager.vPhaseReport);
                 // Before we send the full entities packet we need to loop
                 // through the fighters in squadrons and damage them.
@@ -672,9 +672,9 @@ public class GameStateManager {
                         }
                     }
                 }
-                gameManager.send(gameManager.createFullEntitiesPacket());
-                gameManager.send(gameManager.createReportPacket(null));
-                gameManager.send(gameManager.createEndOfGamePacket());
+                gameManager.communicationManager.send(gameManager.packetManager.createFullEntitiesPacket(gameManager));
+                gameManager.communicationManager.send(gameManager.communicationManager.packetManager.createReportPacket(null, gameManager));
+                gameManager.communicationManager.send(gameManager.packetManager.createEndOfGamePacket(gameManager));
                 break;
             default:
                 break;
@@ -726,7 +726,7 @@ public class GameStateManager {
         }
 
         if (sendChat) {
-            gameManager.sendChat("MegaMek", "Game saved to " + sFinalFile);
+            gameManager.communicationManager.sendChat("MegaMek", "Game saved to " + sFinalFile);
         }
     }
 }

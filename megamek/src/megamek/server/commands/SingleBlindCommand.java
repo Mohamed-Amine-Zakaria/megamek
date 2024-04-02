@@ -92,7 +92,7 @@ public class SingleBlindCommand extends ServerCommand {
                 }
 
                 gameManager.setSingleBlind(player, !hasSingleBlind);
-                gameManager.sendEntities(playerId);
+                gameManager.communicationManager.sendEntities(playerId, gameManager);
             } catch (Exception ex) {
                 server.sendServerChat("/singleblind : singleblind failed. Is the player a Bot? Type /who for a list of players with id #s.");
             }

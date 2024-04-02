@@ -486,7 +486,7 @@ public class ServerHelper {
             if (diceRoll.getIntValue() >= rollTarget) {
                 hex.removeTerrain(Terrains.MAGMA);
                 hex.addTerrain(new Terrain(Terrains.MAGMA, 2));
-                gameManager.sendChangedHex(curPos);
+                gameManager.communicationManager.sendChangedHex(curPos, gameManager);
                 for (Entity en : entity.getGame().getEntitiesVector(curPos)) {
                     if (en != entity) {
                         gameManager.doMagmaDamage(en, false);
@@ -516,7 +516,7 @@ public class ServerHelper {
                 int blackIceChance = Compute.d6(1);
                 if (blackIceChance > 4) {
                     curHex.addTerrain(new Terrain(Terrains.BLACK_ICE, 1));
-                    gameManager.sendChangedHex(curPos);
+                    gameManager.communicationManager.sendChangedHex(curPos, gameManager);
                     return true;
                 }
             } else {
@@ -700,7 +700,7 @@ public class ServerHelper {
         if (!vPhaseReport.isEmpty() && game.getPhase().isMovement()
                 && ((game.getTurnIndex() + 1) < game.getTurnVector().size())) {
             for (Integer playerId : reportPlayers) {
-                gameManager.send(playerId, gameManager.createSpecialReportPacket());
+                gameManager.communicationManager.send(playerId, gameManager.packetManager.createSpecialReportPacket(gameManager));
             }
         }
 

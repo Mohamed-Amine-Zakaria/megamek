@@ -188,7 +188,7 @@ public class AssignNovaNetServerCommand extends ServerCommand {
         ent.setNewRoundNovaNetworkString(net);
         // TODO: Send packet to client.
 
-        gameManager.sendNovaChange(ent.getId(), net);
+        gameManager.communicationManager.sendNovaChange(ent.getId(), net, gameManager);
     }
 
     private String strLink3(int connID, int id1, int id2, int id3) {
