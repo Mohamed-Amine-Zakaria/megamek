@@ -106,7 +106,7 @@ public class HVACWeaponHandler extends ACWeaponHandler {
                     break;
                 }
             }
-            vPhaseReport.addAll(gameManager.explodeEquipment(ae, wloc, weapon));
+            vPhaseReport.addAll(gameManager.entityActionManager.explodeEquipment(ae, wloc, weapon, gameManager));
             r.choose(false);
             vPhaseReport.addElement(r);
             return true;

@@ -396,7 +396,7 @@ public class ArtilleryWeaponIndirectHomingHandler extends ArtilleryWeaponIndirec
                 targetIds.add(target.target.getId());
                 targetTypes.add(target.target.getTargetType());
             }
-            int choice = gameManager.processTAGTargetCFR(ae.getOwnerId(), targetIds, targetTypes);
+            int choice = gameManager.entityActionManager.processTAGTargetCFR(ae.getOwnerId(), targetIds, targetTypes, gameManager);
             newTarget = allowed.get(choice).target;
             target = newTarget;
             aaa.setTargetId(target.getId());

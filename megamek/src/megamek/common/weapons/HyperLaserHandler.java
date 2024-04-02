@@ -69,7 +69,7 @@ public class HyperLaserHandler extends EnergyWeaponHandler {
             }
             r.choose(false);
             vPhaseReport.addElement(r);
-            vPhaseReport.addAll(gameManager.explodeEquipment(ae, wloc, weapon));
+            vPhaseReport.addAll(gameManager.entityActionManager.explodeEquipment(ae, wloc, weapon, gameManager));
             return true;
         }
         return false;

@@ -401,7 +401,7 @@ public class ServerHelper {
             r.subject = entity.getId();
             r.addDesc(entity);
             vPhaseReport.add(r);
-            vPhaseReport.addAll(s.destroyEntity(entity, "pilot death", true));
+            vPhaseReport.addAll(s.entityActionManager.destroyEntity(entity, "pilot death", true, s));
         }
     }
 

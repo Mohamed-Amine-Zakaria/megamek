@@ -489,7 +489,7 @@ public class CapitalMissileBearingsOnlyHandler extends AmmoBayWeaponHandler {
                 targetIds.add(target.getId());
                 toHitValues.add(toHit.getValue());
             }
-            int choice = gameManager.processTeleguidedMissileCFR(ae.getOwnerId(), targetIds, toHitValues);
+            int choice = gameManager.entityActionManager.processTeleguidedMissileCFR(ae.getOwnerId(), targetIds, toHitValues, gameManager);
             newTarget = targets.get(choice);
             target = newTarget;
             aaa.setTargetId(target.getId());

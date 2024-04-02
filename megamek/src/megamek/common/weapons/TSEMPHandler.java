@@ -76,7 +76,7 @@ public class TSEMPHandler extends EnergyWeaponHandler {
                     break;
                 }
             }
-            vPhaseReport.addAll(gameManager.explodeEquipment(ae, wloc, weapon));
+            vPhaseReport.addAll(gameManager.entityActionManager.explodeEquipment(ae, wloc, weapon, gameManager));
             r.choose(false);
             vPhaseReport.addElement(r);
             return true;
@@ -216,8 +216,8 @@ public class TSEMPHandler extends EnergyWeaponHandler {
                 entityTarget.destroyLocation(hit.getLocation());
                 // Check to see if the squad has been eliminated
                 if (entityTarget.getTransferLocation(hit).getLocation() == Entity.LOC_DESTROYED) {
-                    vPhaseReport.addAll(gameManager.destroyEntity(entityTarget,
-                            "all troopers eliminated", false));
+                    vPhaseReport.addAll(gameManager.entityActionManager.destroyEntity(entityTarget,
+                            "all troopers eliminated", false, gameManager));
                 }
             } else {
                 entityTarget.setShutDown(true);

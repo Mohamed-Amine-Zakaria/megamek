@@ -274,7 +274,7 @@ public class AreaEffectHelper {
         vPhaseReport.addElement(r);
 
         if (destroyed) {
-            vPhaseReport.addAll(gameManager.destroyEntity(entity, "fuel-air ordnance detonation", false, false));
+            vPhaseReport.addAll(gameManager.entityActionManager.destroyEntity(entity, "fuel-air ordnance detonation", false, false, gameManager));
             alreadyHit.add(entity.getId());
         }
         return;
@@ -709,7 +709,7 @@ public class AreaEffectHelper {
 
         // if the entity is in the crater radius, bye
         if (blastDistance < craterRadius) {
-            vPhaseReport.addAll(gameManager.destroyEntity(entity, "nuclear explosion proximity", false, false));
+            vPhaseReport.addAll(gameManager.entityActionManager.destroyEntity(entity, "nuclear explosion proximity", false, false, gameManager));
             // Kill the crew
             entity.getCrew().setDoomed(true);
             // no need to do any more damage, it's already destroyed.

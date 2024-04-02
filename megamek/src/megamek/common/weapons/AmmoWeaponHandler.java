@@ -160,6 +160,6 @@ public class AmmoWeaponHandler extends WeaponHandler {
         }
 
         // if we're here, the weapon is going to explode whether it's flagged as explosive or not
-        vPhaseReport.addAll(gameManager.explodeEquipment(ae, wloc, weapon, true));
+        vPhaseReport.addAll(gameManager.entityActionManager.explodeEquipment(ae, wloc, weapon, true, gameManager));
     }
 }

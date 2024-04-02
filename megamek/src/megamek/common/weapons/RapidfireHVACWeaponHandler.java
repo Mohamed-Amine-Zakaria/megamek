@@ -93,7 +93,7 @@ public class RapidfireHVACWeaponHandler extends RapidfireACWeaponHandler {
                     break;
                 }
             }
-            vPhaseReport.addAll(gameManager.explodeEquipment(ae, wloc, weapon));
+            vPhaseReport.addAll(gameManager.entityActionManager.explodeEquipment(ae, wloc, weapon, gameManager));
             r.choose(false);
             vPhaseReport.addElement(r);
             return false;

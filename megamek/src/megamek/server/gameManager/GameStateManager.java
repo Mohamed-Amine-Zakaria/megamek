@@ -423,7 +423,7 @@ public class GameStateManager {
                 gameManager.game.resetTagInfo();
                 gameManager.communicationManager.sendTagInfoReset(gameManager);
                 gameManager.reportManager.clearReports(gameManager);
-                gameManager.resetEntityRound();
+                gameManager.entityActionManager.resetEntityRound(gameManager);
                 gameManager.entityActionManager.resetEntityPhase(phase, gameManager);
                 gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.communicationManager.transmitAllPlayerUpdates(gameManager);
@@ -883,7 +883,7 @@ public class GameStateManager {
                 break;
             case MOVEMENT:
                 if (toSkip != null) {
-                    gameManager.processMovement(toSkip, new MovePath(gameManager.game, toSkip), null);
+                    gameManager.entityActionManager.processMovement(toSkip, new MovePath(gameManager.game, toSkip), null, gameManager);
                 }
                 gameManager.gameStateManager.endCurrentTurn(toSkip, gameManager);
                 break;

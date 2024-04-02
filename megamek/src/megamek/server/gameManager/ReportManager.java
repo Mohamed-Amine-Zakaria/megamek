@@ -23,7 +23,7 @@ public class ReportManager {
             }
         }
         for (Entity e : toRemove) {
-            gameManager.destroyEntity(e, "crew death", false, true);
+            gameManager.entityActionManager.destroyEntity(e, "crew death", false, true, gameManager);
             gameManager.game.removeEntity(e.getId(), IEntityRemovalConditions.REMOVE_SALVAGEABLE);
             e.setDestroyed(true);
         }

@@ -71,8 +71,8 @@ public class BATaserHandler extends AmmoWeaponHandler {
                 // Check to see if the squad has been eliminated
                 if (entityTarget.getTransferLocation(hit).getLocation() == 
                         Entity.LOC_DESTROYED) {
-                    vPhaseReport.addAll(gameManager.destroyEntity(entityTarget,
-                            "all troopers eliminated", false));
+                    vPhaseReport.addAll(gameManager.entityActionManager.destroyEntity(entityTarget,
+                            "all troopers eliminated", false, gameManager));
                 }
                 done = true;
             }

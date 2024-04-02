@@ -316,7 +316,7 @@ public class CommunicationManager {
         }
 
         // looks like mostly everything's okay
-        gameManager.processDeployMinefields(minefields);
+        gameManager.entityActionManager.processDeployMinefields(minefields, gameManager);
         gameManager.gameStateManager.endCurrentTurn(null, gameManager);
     }
 

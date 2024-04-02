@@ -68,8 +68,8 @@ public class MechTaserHandler extends AmmoWeaponHandler {
             entityTarget.destroyLocation(hit.getLocation());
             // Check to see if the squad has been eliminated
             if (entityTarget.getTransferLocation(hit).getLocation() == Entity.LOC_DESTROYED) {
-                vPhaseReport.addAll(gameManager.destroyEntity(entityTarget,
-                        "all troopers eliminated", false));
+                vPhaseReport.addAll(gameManager.entityActionManager.destroyEntity(entityTarget,
+                        "all troopers eliminated", false, gameManager));
             }
             done = true;
         } else if (entityTarget instanceof Mech) {
