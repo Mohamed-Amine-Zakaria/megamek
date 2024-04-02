@@ -228,8 +228,8 @@ public class ArtilleryWeaponIndirectHomingHandler extends ArtilleryWeaponIndirec
             }
             r.add(bldgAbsorbs);
             vPhaseReport.addElement(r);
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg,
-                    nDamPerHit, target.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg,
+                    nDamPerHit, target.getPosition(), gameManager);
             if (entityTarget != null) {
                 for (Report report : buildingReport) {
                     report.subject = entityTarget.getId();
@@ -257,8 +257,8 @@ public class ArtilleryWeaponIndirectHomingHandler extends ArtilleryWeaponIndirec
             r = new Report(3390);
             r.subject = subjectId;
             vPhaseReport.addElement(r);
-            vPhaseReport.addAll(gameManager.damageBuilding(bldg,
-                    nDamPerHit, target.getPosition()));
+            vPhaseReport.addAll(gameManager.environmentalEffectManager.damageBuilding(bldg,
+                    nDamPerHit, target.getPosition(), gameManager));
         } else if (!bMissed) { // Hex is targeted, need to report a hit
             r = new Report(3390);
             r.subject = subjectId;

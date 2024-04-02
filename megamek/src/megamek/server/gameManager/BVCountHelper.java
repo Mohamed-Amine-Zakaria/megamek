@@ -123,7 +123,7 @@ public class BVCountHelper {
         }
 
         // Show teams BVs
-        if (!(checkBlind && gameManager.doBlind() && gameManager.suppressBlindBV())) {
+        if (!(checkBlind && gameManager.environmentalEffectManager.doBlind(gameManager) && gameManager.environmentalEffectManager.suppressBlindBV(gameManager))) {
             for (Map.Entry<Integer, BVCountHelper> e : teamsInfo.entrySet()) {
                 BVCountHelper bvc = e.getValue();
                 teamReport.addAll(bvc.bvReport(Player.TEAM_NAMES[e.getKey()], Player.PLAYER_NONE, false, gameManager));
@@ -142,7 +142,7 @@ public class BVCountHelper {
         result.add(r);
 
         r = new Report(7017, Report.PUBLIC);
-        if (checkBlind && gameManager.doBlind() && gameManager.suppressBlindBV()) {
+        if (checkBlind && gameManager.environmentalEffectManager.doBlind(gameManager) && gameManager.environmentalEffectManager.suppressBlindBV(gameManager)) {
             r.type = Report.PLAYER;
             r.player = playerID;
         }
@@ -154,7 +154,7 @@ public class BVCountHelper {
         result.add(r);
 
         r = new Report(7018, Report.PUBLIC);
-        if (checkBlind && gameManager.doBlind() && gameManager.suppressBlindBV()) {
+        if (checkBlind && gameManager.environmentalEffectManager.doBlind(gameManager) && gameManager.environmentalEffectManager.suppressBlindBV(gameManager)) {
             r.type = Report.PLAYER;
             r.player = playerID;
         }
@@ -168,7 +168,7 @@ public class BVCountHelper {
                 unitsCrippledCount + unitsDestroyedCount + unitsFledCount + unitsCrewEjectedCount +
                 unitsCrewKilledCount > 0) {
             r = new Report(7019, Report.PUBLIC);
-            if (checkBlind && gameManager.doBlind() && gameManager.suppressBlindBV()) {
+            if (checkBlind && gameManager.environmentalEffectManager.doBlind(gameManager) && gameManager.environmentalEffectManager.suppressBlindBV(gameManager)) {
                 r.type = Report.PLAYER;
                 r.player = playerID;
             }
@@ -187,7 +187,7 @@ public class BVCountHelper {
 
         if (unitsCrewEjectedCount > 0) {
             r = new Report(7020, Report.PUBLIC);
-            if (checkBlind && gameManager.doBlind() && gameManager.suppressBlindBV()) {
+            if (checkBlind && gameManager.environmentalEffectManager.doBlind(gameManager) && gameManager.environmentalEffectManager.suppressBlindBV(gameManager)) {
                 r.type = Report.PLAYER;
                 r.player = playerID;
             }

@@ -127,7 +127,7 @@ public class MekMortarAirburstHandler extends AmmoWeaponHandler {
         // Damage building directly
         Building bldg = game.getBoard().getBuildingAt(targetPos);
         if (bldg != null) {
-            newReports = gameManager.damageBuilding(bldg, numRounds, " receives ", targetPos);
+            newReports = gameManager.environmentalEffectManager.damageBuilding(bldg, numRounds, " receives ", targetPos, gameManager);
             adjustReports(newReports);
             vPhaseReport.addAll(newReports);
         }
@@ -159,11 +159,11 @@ public class MekMortarAirburstHandler extends AmmoWeaponHandler {
             if (Compute.isInBuilding(game, target, targetPos)) {
                 Player tOwner = target.getOwner();
                 String colorcode = tOwner.getColour().getHexString(0x00F0F0F0);
-                newReports = gameManager.damageBuilding(bldg, numRounds, " shields "
+                newReports = gameManager.environmentalEffectManager.damageBuilding(bldg, numRounds, " shields "
                         + target.getShortName() + " (<B><font color='"
                         + colorcode + "'>" + tOwner.getName()
                         + "</font></B>)"
-                        + " from the airburst mortar, receiving ", targetPos);
+                        + " from the airburst mortar, receiving ", targetPos, gameManager);
                 adjustReports(newReports);
                 vPhaseReport.addAll(newReports);
             } else {

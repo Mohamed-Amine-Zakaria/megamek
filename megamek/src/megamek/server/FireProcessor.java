@@ -79,7 +79,7 @@ public class FireProcessor extends DynamicTerrainProcessor {
                     // Does the building burn down?
                     if (cf == 0) {
                         vPhaseReport.addElement(Report.publicReport(5120).add(bldg.getName()));
-                    } else if (!gameManager.checkForCollapse(bldg, positionMap, coords, false, vPhaseReport)) {
+                    } else if (!gameManager.environmentalEffectManager.checkForCollapse(bldg, positionMap, coords, false, vPhaseReport, gameManager)) {
                         // If it doesn't collapse under its load, mark it for update.
                         bldg.setPhaseCF(cf, coords);
                     }
@@ -146,7 +146,7 @@ public class FireProcessor extends DynamicTerrainProcessor {
                     }
 
                     // Check for any explosions
-                    gameManager.checkExplodeIndustrialZone(currentCoords, vPhaseReport);
+                    gameManager.environmentalEffectManager.checkExplodeIndustrialZone(currentCoords, vPhaseReport, gameManager);
 
                     // Add smoke, unless tornado or optional rules
                     boolean containsForest = (currentHex.containsTerrain(Terrains.WOODS)
@@ -256,7 +256,7 @@ public class FireProcessor extends DynamicTerrainProcessor {
             return;
         }
 
-        if (!(hex.containsTerrain(Terrains.FIRE)) && gameManager.checkIgnition(coords, roll)) {
+        if (!(hex.containsTerrain(Terrains.FIRE)) && gameManager.environmentalEffectManager.checkIgnition(coords, roll, gameManager)) {
             vPhaseReport.addElement(Report.publicReport(5150).add(coords.getBoardNum()).add(origin.getBoardNum()));
         }
     }

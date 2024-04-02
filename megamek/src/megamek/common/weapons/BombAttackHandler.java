@@ -244,7 +244,7 @@ public class BombAttackHandler extends WeaponHandler {
                     }
                 }
                 if (type == BombType.B_INFERNO) {
-                    gameManager.deliverBombInferno(drop, ae, subjectId, vPhaseReport);
+                    gameManager.environmentalEffectManager.deliverBombInferno(drop, ae, subjectId, vPhaseReport, gameManager);
                 } else if (type == BombType.B_THUNDER) {
                     gameManager.environmentalEffectManager.deliverThunderMinefield(drop, ae.getOwner().getId(), 20, ae.getId(), gameManager);
                     List<Coords> hexes = drop.allAdjacent();
@@ -254,7 +254,7 @@ public class BombAttackHandler extends WeaponHandler {
                 } else if (type == BombType.B_FAE_SMALL || type == BombType.B_FAE_LARGE) {
                     AreaEffectHelper.processFuelAirDamage(drop, EquipmentType.get(BombType.getBombInternalName(type)), ae, vPhaseReport, gameManager);
                 } else {
-                    gameManager.deliverBombDamage(drop, type, subjectId, ae, vPhaseReport);
+                    gameManager.environmentalEffectManager.deliverBombDamage(drop, type, subjectId, ae, vPhaseReport, gameManager);
                 }
                 // Finally, we need a new attack roll for the next bomb, if any.
                 roll = Compute.rollD6(2);

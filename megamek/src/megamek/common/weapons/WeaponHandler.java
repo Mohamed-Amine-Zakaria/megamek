@@ -456,7 +456,7 @@ public class WeaponHandler implements AttackHandler, Serializable {
 
         // shots that miss an entity can also potential cause explosions in a
         // heavy industrial hex
-        gameManager.checkExplodeIndustrialZone(target.getPosition(), vPhaseReport);
+        gameManager.environmentalEffectManager.checkExplodeIndustrialZone(target.getPosition(), vPhaseReport, gameManager);
 
         // TW, pg. 171 - shots that miss a target in a building don't damage the
         // building, unless the attacker is adjacent
@@ -1420,16 +1420,16 @@ public class WeaponHandler implements AttackHandler, Serializable {
         } else if (damageableCoverType == LosEffects.DAMAGABLE_COVER_BUILDING) {
             // Normal damage
             int nDamage = nDamPerHit * Math.min(nCluster, hits);
-            Vector<Report> buildingReport = gameManager.damageBuilding(coverBuilding, nDamage,
-                    " blocks the shot and takes ", coverLoc);
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(coverBuilding, nDamage,
+                    " blocks the shot and takes ", coverLoc, gameManager);
             for (Report report : buildingReport) {
                 report.subject = subjectId;
                 report.indent();
             }
             vPhaseReport.addAll(buildingReport);
             // Damage any infantry in the building.
-            Vector<Report> infantryReport = gameManager.damageInfantryIn(coverBuilding, nDamage,
-                    coverLoc, wtype.getInfantryDamageClass());
+            Vector<Report> infantryReport = gameManager.environmentalEffectManager.damageInfantryIn(coverBuilding, nDamage,
+                    coverLoc, wtype.getInfantryDamageClass(), gameManager);
             for (Report report : infantryReport) {
                 report.indent(2);
             }
@@ -1551,7 +1551,7 @@ public class WeaponHandler implements AttackHandler, Serializable {
                     false, false, throughFront, underWater, nukeS2S));
             if (damageType.equals(DamageType.ANTI_TSM) && (target instanceof Mech)
                     && entityTarget.antiTSMVulnerable()) {
-                vPhaseReport.addAll(gameManager.doGreenSmokeDamage(entityTarget));
+                vPhaseReport.addAll(gameManager.environmentalEffectManager.doGreenSmokeDamage(entityTarget, gameManager));
             }
             // for salvo shots, report that the aimed location was hit after
             // applying damage, because the location is first reported when
@@ -1606,8 +1606,8 @@ public class WeaponHandler implements AttackHandler, Serializable {
             int toBldg = Math.min(bldgAbsorbs, nDamage);
             nDamage -= toBldg;
             Report.addNewline(vPhaseReport);
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, toBldg,
-                    entityTarget.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, toBldg,
+                    entityTarget.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = subjectId;
             }
@@ -1623,8 +1623,8 @@ public class WeaponHandler implements AttackHandler, Serializable {
         } else if ((bldgAbsorbs < 0) && !targetStickingOutOfBuilding) {
             int toBldg = -bldgAbsorbs;
             Report.addNewline(vPhaseReport);
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, toBldg,
-                    entityTarget.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, toBldg,
+                    entityTarget.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = subjectId;
             }
@@ -1696,7 +1696,7 @@ public class WeaponHandler implements AttackHandler, Serializable {
             vPhaseReport.addElement(r);
         }
         Report.addNewline(vPhaseReport);
-        Vector<Report> buildingReport = gameManager.damageBuilding(bldg, nDamage, coords);
+        Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, nDamage, coords, gameManager);
         for (Report report : buildingReport) {
             report.subject = subjectId;
         }
@@ -1704,8 +1704,8 @@ public class WeaponHandler implements AttackHandler, Serializable {
 
         // Damage any infantry in hex, unless attack between units in same bldg
         if (toHit.getThruBldg() == null) {
-            vPhaseReport.addAll(gameManager.damageInfantryIn(bldg, nDamage, coords,
-                    wtype.getInfantryDamageClass()));
+            vPhaseReport.addAll(gameManager.environmentalEffectManager.damageInfantryIn(bldg, nDamage, coords,
+                    wtype.getInfantryDamageClass(), gameManager));
         }
     }
 

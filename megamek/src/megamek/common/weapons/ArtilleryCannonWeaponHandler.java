@@ -220,9 +220,9 @@ public class ArtilleryCannonWeaponHandler extends AmmoWeaponHandler {
             AreaEffectHelper.clearMineFields(targetPos, Minefield.CLEAR_NUMBER_WEAPON, ae, vPhaseReport, game, gameManager);
         }
 
-        gameManager.artilleryDamageArea(targetPos, ae.getPosition(), ammoType,
+        gameManager.environmentalEffectManager.artilleryDamageArea(targetPos, ae.getPosition(), ammoType,
             subjectId, ae, isFlak, altitude, mineClear, vPhaseReport,
-            asfFlak, -1);
+            asfFlak, -1, gameManager);
 
         // artillery may unintentionally clear minefields, but only if it wasn't trying to
         // TODO : Does this apply to arty cannons?

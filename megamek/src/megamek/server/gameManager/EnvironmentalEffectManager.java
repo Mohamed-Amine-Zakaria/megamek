@@ -1,14 +1,19 @@
 package megamek.server.gameManager;
 
 import megamek.common.*;
+import megamek.common.actions.ArtilleryAttackAction;
 import megamek.common.actions.DfaAttackAction;
 import megamek.common.actions.EntityAction;
 import megamek.common.actions.SearchlightAttackAction;
+import megamek.common.enums.GamePhase;
 import megamek.common.equipment.ArmorType;
 import megamek.common.net.enums.PacketCommand;
 import megamek.common.net.packets.Packet;
 import megamek.common.options.OptionsConstants;
+import megamek.common.weapons.AreaEffectHelper;
+import megamek.common.weapons.AttackHandler;
 import megamek.common.weapons.DamageType;
+import megamek.common.weapons.WeaponHandler;
 import megamek.server.SmokeCloud;
 import org.apache.logging.log4j.LogManager;
 
@@ -85,7 +90,7 @@ public class EnvironmentalEffectManager {
         }
         Building bldg = gameManager.game.getBoard().getBuildingAt(centralPos);
         if (null != bldg) {
-            gameManager.collapseBuilding(bldg, positionMap, centralPos, gameManager.vPhaseReport);
+            gameManager.environmentalEffectManager.collapseBuilding(bldg, positionMap, centralPos, gameManager.vPhaseReport, gameManager);
         }
         for (int i = 0; i < 6; i++) {
             Coords pos = centralPos.translated(i);
@@ -97,7 +102,7 @@ public class EnvironmentalEffectManager {
             }
             bldg = gameManager.game.getBoard().getBuildingAt(pos);
             if (null != bldg) {
-                gameManager.collapseBuilding(bldg, positionMap, pos, gameManager.vPhaseReport);
+                gameManager.environmentalEffectManager.collapseBuilding(bldg, positionMap, pos, gameManager.vPhaseReport, gameManager);
             }
         }
 
@@ -111,9 +116,9 @@ public class EnvironmentalEffectManager {
                     continue;
                 }
 
-                alreadyHit = gameManager.artilleryDamageHex(pos, centralPos, damageDice, null, killer.getId(),
+                alreadyHit = gameManager.environmentalEffectManager.artilleryDamageHex(pos, centralPos, damageDice, null, killer.getId(),
                         killer, null, false, 0, gameManager.vPhaseReport, false,
-                        alreadyHit, true);
+                        alreadyHit, true, gameManager);
             }
         }
         gameManager.entityActionManager.destroyDoomedEntities(alreadyHit, gameManager);
@@ -280,7 +285,7 @@ public class EnvironmentalEffectManager {
         }
 
         // Update the unloaded unit.
-        gameManager.entityUpdate(unit.getId());
+        gameManager.entityActionManager.entityUpdate(unit.getId(), gameManager);
 
         // Set the turn mask. We need to be specific otherwise we run the risk
         // of having a unit of another class consume the turn and leave the
@@ -416,7 +421,7 @@ public class EnvironmentalEffectManager {
         drop.setSecondaryFacing(entity.getFacing());
 
         drop.setAltitude(altitude);
-        gameManager.entityUpdate(drop.getId());
+        gameManager.entityActionManager.entityUpdate(drop.getId(), gameManager);
     }
 
     /**
@@ -478,7 +483,7 @@ public class EnvironmentalEffectManager {
                             gameManager.game.moveToGraveyard(entity.getId());
                             gameManager.communicationManager.send(gameManager.packetManager.createRemoveEntityPacket(entity.getId(), gameManager));
                         } else { // Infantry that aren't dead are damaged.
-                            gameManager.entityUpdate(entity.getId());
+                            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
                         }
                     } // End entity-is-infantry
                 } // Check the next entity.
@@ -594,7 +599,7 @@ public class EnvironmentalEffectManager {
                 Roll diceRoll = Compute.rollD6(2);
 
                 // Report minefield roll
-                if (gameManager.doBlind()) { // only report if DB, otherwise all players see
+                if (gameManager.environmentalEffectManager.doBlind(gameManager)) { // only report if DB, otherwise all players see
                     r = new Report(2152, Report.PLAYER);
                     r.player = mf.getPlayerId();
                     r.add(Minefield.getDisplayableName(mf.getType()));
@@ -606,7 +611,7 @@ public class EnvironmentalEffectManager {
 
                 if (diceRoll.getIntValue() >= 6) {
                     // Report hit
-                    if (gameManager.doBlind()) {
+                    if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
                         r = new Report(5543, Report.PLAYER);
                         r.player = mf.getPlayerId();
                         vMineReport.add(r);
@@ -659,7 +664,7 @@ public class EnvironmentalEffectManager {
                     continue;
                 } else {
                     // Report miss
-                    if (gameManager.doBlind()) {
+                    if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
                         r = new Report(5542, Report.PLAYER);
                         r.player = mf.getPlayerId();
                         vMineReport.add(r);
@@ -695,7 +700,7 @@ public class EnvironmentalEffectManager {
             Roll diceRoll = Compute.rollD6(2);
 
             // Report minefield roll
-            if (gameManager.doBlind()) { // Only do if DB, otherwise all players will see
+            if (gameManager.environmentalEffectManager.doBlind(gameManager)) { // Only do if DB, otherwise all players will see
                 r = new Report(2151, Report.PLAYER);
                 r.player = mf.getPlayerId();
                 r.add(Minefield.getDisplayableName(mf.getType()));
@@ -708,7 +713,7 @@ public class EnvironmentalEffectManager {
 
             if (diceRoll.getIntValue() < target) {
                 // Report miss
-                if (gameManager.doBlind()) {
+                if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
                     r = new Report(2217, Report.PLAYER);
                     r.player = mf.getPlayerId();
                     vMineReport.add(r);
@@ -717,7 +722,7 @@ public class EnvironmentalEffectManager {
             }
 
             // Report hit
-            if (gameManager.doBlind()) {
+            if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
                 r = new Report(2270, Report.PLAYER);
                 r.player = mf.getPlayerId();
                 vMineReport.add(r);
@@ -1311,7 +1316,7 @@ public class EnvironmentalEffectManager {
         }
         r.add(coords.getBoardNum());
         vPhaseReport.add(r);
-        gameManager.createSmoke(coords, smokeType, 3);
+        gameManager.environmentalEffectManager.createSmoke(coords, smokeType, 3, gameManager);
         Hex hex = gameManager.game.getBoard().getHex(coords);
         hex.addTerrain(new Terrain(Terrains.SMOKE, smokeType));
         gameManager.communicationManager.sendChangedHex(coords, gameManager);
@@ -1322,7 +1327,7 @@ public class EnvironmentalEffectManager {
         r.indent(2);
         r.add(coords.getBoardNum());
         vPhaseReport.add(r);
-        gameManager.createSmoke(coords, SmokeCloud.SMOKE_LIGHT, 3);
+        gameManager.environmentalEffectManager.createSmoke(coords, SmokeCloud.SMOKE_LIGHT, 3, gameManager);
         Hex hex = gameManager.game.getBoard().getHex(coords);
         hex.addTerrain(new Terrain(Terrains.SMOKE, SmokeCloud.SMOKE_LIGHT));
         gameManager.communicationManager.sendChangedHex(coords, gameManager);
@@ -1333,7 +1338,7 @@ public class EnvironmentalEffectManager {
         r.indent(2);
         r.add(coords.getBoardNum());
         vPhaseReport.add(r);
-        gameManager.createSmoke(coords, SmokeCloud.SMOKE_HEAVY, duration);
+        gameManager.environmentalEffectManager.createSmoke(coords, SmokeCloud.SMOKE_HEAVY, duration, gameManager);
         Hex hex = gameManager.game.getBoard().getHex(coords);
         hex.addTerrain(new Terrain(Terrains.SMOKE, SmokeCloud.SMOKE_HEAVY));
         gameManager.communicationManager.sendChangedHex(coords, gameManager);
@@ -1344,7 +1349,7 @@ public class EnvironmentalEffectManager {
         r.indent(2);
         r.add(coords.getBoardNum());
         vPhaseReport.add(r);
-        gameManager.createSmoke(coords, SmokeCloud.SMOKE_CHAFF_LIGHT, 1);
+        gameManager.environmentalEffectManager.createSmoke(coords, SmokeCloud.SMOKE_CHAFF_LIGHT, 1, gameManager);
         Hex hex = gameManager.game.getBoard().getHex(coords);
         hex.addTerrain(new Terrain(Terrains.SMOKE, SmokeCloud.SMOKE_CHAFF_LIGHT));
         gameManager.communicationManager.sendChangedHex(coords, gameManager);
@@ -1362,7 +1367,7 @@ public class EnvironmentalEffectManager {
         r.indent(2);
         r.add(coords.getBoardNum());
         vPhaseReport.add(r);
-        gameManager.createSmoke(coords, SmokeCloud.SMOKE_HEAVY, 3);
+        gameManager.environmentalEffectManager.createSmoke(coords, SmokeCloud.SMOKE_HEAVY, 3, gameManager);
         Hex hex = gameManager.game.getBoard().getHex(coords);
         if (hex != null) {
             hex.addTerrain(new Terrain(Terrains.SMOKE, SmokeCloud.SMOKE_HEAVY));
@@ -1379,7 +1384,7 @@ public class EnvironmentalEffectManager {
                 r.indent(2);
                 r.add(tempcoords.getBoardNum());
                 vPhaseReport.add(r);
-                gameManager.createSmoke(tempcoords, SmokeCloud.SMOKE_HEAVY, 3);
+                gameManager.environmentalEffectManager.createSmoke(tempcoords, SmokeCloud.SMOKE_HEAVY, 3, gameManager);
                 hex = gameManager.game.getBoard().getHex(tempcoords);
                 hex.addTerrain(new Terrain(Terrains.SMOKE, SmokeCloud.SMOKE_HEAVY));
                 gameManager.communicationManager.sendChangedHex(tempcoords, gameManager);
@@ -1399,7 +1404,7 @@ public class EnvironmentalEffectManager {
         r.indent(2);
         r.add(coords.getBoardNum());
         vPhaseReport.add(r);
-        gameManager.createSmoke(coords, SmokeCloud.SMOKE_LI_HEAVY, 2);
+        gameManager.environmentalEffectManager.createSmoke(coords, SmokeCloud.SMOKE_LI_HEAVY, 2, gameManager);
         Hex hex = gameManager.game.getBoard().getHex(coords);
         if (null != hex) {
             hex.addTerrain(new Terrain(Terrains.SMOKE, SmokeCloud.SMOKE_LI_HEAVY));
@@ -1416,7 +1421,7 @@ public class EnvironmentalEffectManager {
                 r.indent(2);
                 r.add(tempcoords.getBoardNum());
                 vPhaseReport.add(r);
-                gameManager.createSmoke(tempcoords, SmokeCloud.SMOKE_LI_HEAVY, 2);
+                gameManager.environmentalEffectManager.createSmoke(tempcoords, SmokeCloud.SMOKE_LI_HEAVY, 2, gameManager);
                 hex = gameManager.game.getBoard().getHex(tempcoords);
                 hex.addTerrain(new Terrain(Terrains.SMOKE, SmokeCloud.SMOKE_LI_HEAVY));
                 gameManager.communicationManager.sendChangedHex(tempcoords, gameManager);
@@ -1443,7 +1448,7 @@ public class EnvironmentalEffectManager {
             }
             // possibly melt ice and snow
             if (h.containsTerrain(Terrains.ICE) || h.containsTerrain(Terrains.SNOW)) {
-                vPhaseReport.addAll(gameManager.meltIceAndSnow(coords, subjectId));
+                vPhaseReport.addAll(gameManager.entityActionManager.meltIceAndSnow(coords, subjectId, gameManager));
             }
         }
         for (Entity entity : gameManager.game.getEntitiesVector(coords)) {
@@ -1477,7 +1482,7 @@ public class EnvironmentalEffectManager {
                 }
                 // possibly melt ice and snow
                 if (h.containsTerrain(Terrains.ICE) || h.containsTerrain(Terrains.SNOW)) {
-                    vPhaseReport.addAll(gameManager.meltIceAndSnow(tempcoords, subjectId));
+                    vPhaseReport.addAll(gameManager.entityActionManager.meltIceAndSnow(tempcoords, subjectId, gameManager));
                 }
             }
             for (Entity entity : gameManager.game.getEntitiesVector(tempcoords)) {
@@ -1558,7 +1563,7 @@ public class EnvironmentalEffectManager {
         // place on board
         tele.setPosition(ae.getPosition());
         // Update the entity
-        gameManager.entityUpdate(tele.getId());
+        gameManager.entityActionManager.entityUpdate(tele.getId(), gameManager);
         // check to see if the launching of this missile removes control of any
         // prior missiles
         if (ae.getTMTracker().containsLauncher(wId)) {
@@ -1655,8 +1660,8 @@ public class EnvironmentalEffectManager {
                     }
                 }
                 if (gameManager.game.getBoard().getBuildingAt(t.getPosition()) != null) {
-                    Vector<Report> vBuildingReport = gameManager.damageBuilding(gameManager.game.getBoard().getBuildingAt(t.getPosition()),
-                            2 * missiles, t.getPosition());
+                    Vector<Report> vBuildingReport = gameManager.environmentalEffectManager.damageBuilding(gameManager.game.getBoard().getBuildingAt(t.getPosition()),
+                            2 * missiles, t.getPosition(), gameManager);
                     for (Report report : vBuildingReport) {
                         report.subject = attId;
                     }
@@ -1681,8 +1686,8 @@ public class EnvironmentalEffectManager {
                 break;
             case Targetable.TYPE_BLDG_IGNITE:
             case Targetable.TYPE_BUILDING:
-                Vector<Report> vBuildingReport = gameManager.damageBuilding(gameManager.game.getBoard().getBuildingAt(t.getPosition()),
-                        2 * missiles, t.getPosition());
+                Vector<Report> vBuildingReport = gameManager.environmentalEffectManager.damageBuilding(gameManager.game.getBoard().getBuildingAt(t.getPosition()),
+                        2 * missiles, t.getPosition(), gameManager);
                 for (Report report : vBuildingReport) {
                     report.subject = attId;
                 }
@@ -2089,7 +2094,7 @@ public class EnvironmentalEffectManager {
                 melted = true;
             }
             if (melted) {
-                vPhaseReport.addAll(gameManager.meltIceAndSnow(c, entityId));
+                vPhaseReport.addAll(gameManager.entityActionManager.meltIceAndSnow(c, entityId, gameManager));
                 return false;
             }
 
@@ -2114,8 +2119,8 @@ public class EnvironmentalEffectManager {
                 r.subject = entityId;
                 vPhaseReport.add(r);
             }
-        } else if (gameManager.checkIgnition(c, nTargetRoll, bInferno, entityId,
-                vPhaseReport)) {
+        } else if (gameManager.environmentalEffectManager.checkIgnition(c, nTargetRoll, bInferno, entityId,
+                vPhaseReport, gameManager)) {
             return true;
         }
         return false;
@@ -2217,7 +2222,7 @@ public class EnvironmentalEffectManager {
                 r = new Report(3092, reportType);
                 r.subject = entityId;
                 vPhaseReport.add(r);
-                vPhaseReport.addAll(gameManager.resolveIceBroken(c));
+                vPhaseReport.addAll(gameManager.entityActionManager.resolveIceBroken(c, gameManager));
             } else {
                 ice.setTerrainFactor(tf);
             }
@@ -2232,7 +2237,7 @@ public class EnvironmentalEffectManager {
                 h.removeTerrain(Terrains.MAGMA);
                 h.addTerrain(new Terrain(Terrains.MAGMA, 2));
                 for (Entity en : gameManager.game.getEntitiesVector(c)) {
-                    gameManager.doMagmaDamage(en, false);
+                    gameManager.environmentalEffectManager.doMagmaDamage(en, false, gameManager);
                 }
             } else {
                 magma.setTerrainFactor(tf);
@@ -2241,7 +2246,7 @@ public class EnvironmentalEffectManager {
         gameManager.communicationManager.sendChangedHex(c, gameManager);
 
         // any attempt to clear an heavy industrial hex may cause an explosion
-        gameManager.checkExplodeIndustrialZone(c, vPhaseReport);
+        gameManager.environmentalEffectManager.checkExplodeIndustrialZone(c, vPhaseReport, gameManager);
 
         return vPhaseReport;
     }
@@ -2344,6 +2349,2214 @@ public class EnvironmentalEffectManager {
         gameManager.game.resetActions();
         for (EntityAction entityAction : toKeep) {
             gameManager.game.addAction(entityAction);
+        }
+    }
+
+    /**
+     * Checks for fire ignition based on a given target roll. If successful,
+     * lights a fire also checks to see that fire is possible in the specified
+     * hex.
+     *  @param c        - the <code>Coords</code> to be lit.
+     * @param roll     - the <code>TargetRoll</code> for the ignition roll
+     * @param bInferno - <code>true</code> if the fire is an inferno fire. If this
+     *                 value is <code>false</code> the hex will be lit only if it
+     *                 contains Woods, jungle or a Building.
+     * @param entityId - the entityId responsible for the ignite attempt. If the
+     *                 value is Entity.NONE, then the roll attempt will not be
+     * @param vPhaseReport
+     * @param gameManager
+     */
+    public boolean checkIgnition(Coords c, TargetRoll roll, boolean bInferno, int entityId,
+                                 Vector<Report> vPhaseReport, GameManager gameManager) {
+
+        Hex hex = gameManager.game.getBoard().getHex(c);
+
+        // The hex might be null due to spreadFire translation
+        // goes outside of the board limit.
+        if (null == hex) {
+            return false;
+        }
+
+        // The hex may already be on fire.
+        if (hex.containsTerrain(Terrains.FIRE)) {
+            return false;
+        }
+
+        if (!bInferno && !hex.isIgnitable()) {
+            return false;
+        }
+
+        Roll diceRoll = Compute.rollD6(2);
+        Report r;
+
+        if (entityId != Entity.NONE) {
+            r = new Report(3430);
+            r.indent(2);
+            r.subject = entityId;
+            r.add(roll.getValueAsString());
+            r.add(roll.getDesc());
+            r.add(diceRoll);
+            vPhaseReport.add(r);
+        }
+
+        if (diceRoll.getIntValue() >= roll.getValue()) {
+            gameManager.ignite(c, Terrains.FIRE_LVL_NORMAL, vPhaseReport);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Returns true if the hex is set on fire with the specified roll. Of
+     * course, also checks to see that fire is possible in the specified hex.
+     * This version of the method will not report the attempt roll.
+     *  @param c        - the <code>Coords</code> to be lit.
+     * @param roll     - the <code>int</code> target number for the ignition roll
+     * @param bInferno - <code>true</code> if the fire can be lit in any terrain. If
+     *                 this value is <code>false</code> the hex will be lit only if
+     * @param gameManager
+     */
+    public boolean checkIgnition(Coords c, TargetRoll roll, boolean bInferno, GameManager gameManager) {
+        return checkIgnition(c, roll, bInferno, Entity.NONE, null, gameManager);
+    }
+
+    /**
+     * Returns true if the hex is set on fire with the specified roll. Of
+     * course, also checks to see that fire is possible in the specified hex.
+     * This version of the method will not report the attempt roll.
+     *  @param c    - the <code>Coords</code> to be lit.
+     * @param roll - the <code>int</code> target number for the ignition roll
+     * @param gameManager
+     */
+    public boolean checkIgnition(Coords c, TargetRoll roll, GameManager gameManager) {
+        // default signature, assuming only woods can burn
+        return checkIgnition(c, roll, false, Entity.NONE, null, gameManager);
+    }
+
+    boolean suppressBlindBV(GameManager gameManager) {
+        return gameManager.game.getOptions().booleanOption(OptionsConstants.ADVANCED_SUPPRESS_DB_BV);
+    }
+
+    /**
+     * @return whether this game is double blind or not and we should be blind in
+     * the current phase
+     * @param gameManager
+     */
+    boolean doBlind(GameManager gameManager) {
+        return gameManager.game.getOptions().booleanOption(OptionsConstants.ADVANCED_DOUBLE_BLIND)
+                && gameManager.game.getPhase().isDuringOrAfter(GamePhase.DEPLOYMENT);
+    }
+
+    /**
+     * Makes one slot of inferno ammo, determined by certain rules, explode on a
+     * mech.
+     *
+     * @param entity
+     *            The <code>Entity</code> that should suffer an inferno ammo
+     *            explosion.
+     * @param gameManager
+     */
+    protected Vector<Report> explodeInfernoAmmoFromHeat(Entity entity, GameManager gameManager) {
+        int damage = 0;
+        int rack = 0;
+        int boomloc = -1;
+        int boomslot = -1;
+        Vector<Report> vDesc = new Vector<>();
+        Report r;
+
+        // Find the most destructive Inferno ammo.
+        for (int j = 0; j < entity.locations(); j++) {
+            for (int k = 0; k < entity.getNumberOfCriticals(j); k++) {
+                CriticalSlot cs = entity.getCritical(j, k);
+                // Ignore empty, destroyed, hit, and structure slots.
+                if ((cs == null) || cs.isDestroyed() || cs.isHit()
+                        || (cs.getType() != CriticalSlot.TYPE_EQUIPMENT)) {
+                    continue;
+                }
+                // Ignore everything but ammo or LAM bomb bay slots.
+                Mounted mounted = cs.getMount();
+                int newRack;
+                int newDamage;
+                if (mounted.getType() instanceof AmmoType) {
+                    AmmoType atype = (AmmoType) mounted.getType();
+                    if (!atype.isExplosive(mounted)
+                            || (!(atype.getMunitionType().contains(AmmoType.Munitions.M_INFERNO))
+                            && !(atype.getMunitionType().contains(AmmoType.Munitions.M_IATM_IIW)))) {
+                        continue;
+                    }
+                    // ignore empty, destroyed, or missing bins
+                    if (mounted.getHittableShotsLeft() == 0) {
+                        continue;
+                    }
+                    // Find the most destructive undamaged ammo.
+                    // TW page 160, compare one rack's
+                    // damage. Ties go to most rounds.
+                    newRack = atype.getDamagePerShot() * atype.getRackSize();
+                    newDamage = mounted.getExplosionDamage();
+                    Mounted mount2 = cs.getMount2();
+                    if ((mount2 != null) && (mount2.getType() instanceof AmmoType)
+                            && (mount2.getHittableShotsLeft() > 0)) {
+                        // must be for same weaponType, so rackSize stays
+                        atype = (AmmoType) mount2.getType();
+                        newRack += atype.getDamagePerShot() * atype.getRackSize();
+                        newDamage += mount2.getExplosionDamage();
+                    }
+                } else if ((mounted.getType() instanceof MiscType)
+                        && mounted.getType().hasFlag(MiscType.F_BOMB_BAY)) {
+                    while (mounted.getLinked() != null) {
+                        mounted = mounted.getLinked();
+                    }
+                    if (mounted.getExplosionDamage() == 0) {
+                        continue;
+                    }
+                    newRack = 1;
+                    newDamage = mounted.getExplosionDamage();
+                } else {
+                    continue;
+                }
+
+                if (!mounted.isHit()
+                        && ((rack < newRack) || ((rack == newRack) && (damage < newDamage)))) {
+                    rack = newRack;
+                    damage = newDamage;
+                    boomloc = j;
+                    boomslot = k;
+                }
+            }
+        }
+        // Did we find anything to explode?
+        if ((boomloc != -1) && (boomslot != -1)) {
+            CriticalSlot slot = entity.getCritical(boomloc, boomslot);
+            slot.setHit(true);
+            Mounted equip = slot.getMount();
+            equip.setHit(true);
+            // We've allocated heatBuildup to heat in resolveHeat(),
+            // so need to add to the entity's heat instead.
+            if ((equip.getType() instanceof AmmoType)
+                    || (equip.getLinked() != null
+                    && equip.getLinked().getType() instanceof BombType
+                    && ((BombType) equip.getLinked().getType()).getBombType() == BombType.B_INFERNO)) {
+                entity.heat += Math.min(equip.getExplosionDamage(), 30);
+            }
+            vDesc.addAll(gameManager.entityActionManager.explodeEquipment(entity, boomloc, boomslot, gameManager));
+            r = new Report(5155);
+            r.indent();
+            r.subject = entity.getId();
+            r.add(entity.heat);
+            vDesc.addElement(r);
+            entity.heatBuildup = 0;
+        } else { // no ammo to explode
+            r = new Report(5160);
+            r.indent();
+            r.subject = entity.getId();
+            vDesc.addElement(r);
+        }
+        return vDesc;
+    }
+
+    /**
+     * checks for unintended explosion of heavy industrial zone hex and applies
+     * damage to entities occupying the hex
+     * @param c
+     * @param vDesc
+     * @param gameManager
+     */
+    public void checkExplodeIndustrialZone(Coords c, Vector<Report> vDesc, GameManager gameManager) {
+        Report r;
+        Hex hex = gameManager.game.getBoard().getHex(c);
+        if (null == hex) {
+            return;
+        }
+
+        if (!hex.containsTerrain(Terrains.INDUSTRIAL)) {
+            return;
+        }
+
+        r = new Report(3590, Report.PUBLIC);
+        r.add(c.getBoardNum());
+        r.indent(2);
+        Roll diceRoll = Compute.rollD6(2);
+        r.add(8);
+        r.add(diceRoll);
+
+        if (diceRoll.getIntValue() > 7) {
+            r.choose(true);
+            r.newlines = 0;
+            vDesc.add(r);
+            boolean onFire = false;
+            boolean powerLine = false;
+            boolean minorExp = false;
+            boolean elecExp = false;
+            boolean majorExp = false;
+            if (diceRoll.getIntValue() == 8) {
+                onFire = true;
+                r = new Report(3600, Report.PUBLIC);
+                r.newlines = 0;
+                vDesc.add(r);
+            } else if (diceRoll.getIntValue() == 9) {
+                powerLine = true;
+                r = new Report(3605, Report.PUBLIC);
+                r.newlines = 0;
+                vDesc.add(r);
+            } else if (diceRoll.getIntValue() == 10) {
+                minorExp = true;
+                onFire = true;
+                r = new Report(3610, Report.PUBLIC);
+                r.newlines = 0;
+                vDesc.add(r);
+            } else if (diceRoll.getIntValue() == 11) {
+                elecExp = true;
+                r = new Report(3615, Report.PUBLIC);
+                r.newlines = 0;
+                vDesc.add(r);
+            } else {
+                onFire = true;
+                majorExp = true;
+                r = new Report(3620, Report.PUBLIC);
+                r.newlines = 0;
+                vDesc.add(r);
+            }
+            // apply damage here
+            if (powerLine || minorExp || elecExp || majorExp) {
+                // cycle through the entities in the hex and apply damage
+                for (Entity en : gameManager.game.getEntitiesVector(c)) {
+                    int damage = 3;
+                    if (minorExp) {
+                        damage = 5;
+                    }
+                    if (elecExp) {
+                        damage = Compute.d6(1) + 3;
+                    }
+                    if (majorExp) {
+                        damage = Compute.d6(2);
+                    }
+                    HitData hit = en.rollHitLocation(ToHitData.HIT_NORMAL, ToHitData.SIDE_FRONT);
+                    if (en instanceof BattleArmor) {
+                        // ugly - I have to apply damage to each trooper
+                        // separately
+                        for (int loc = 0; loc < en.locations(); loc++) {
+                            if ((IArmorState.ARMOR_NA != en.getInternal(loc))
+                                    && (IArmorState.ARMOR_DESTROYED != en.getInternal(loc))
+                                    && (IArmorState.ARMOR_DOOMED != en.getInternal(loc))) {
+                                vDesc.addAll(gameManager.damageEntity(en, new HitData(loc), damage));
+                            }
+                        }
+                    } else {
+                        vDesc.addAll(gameManager.damageEntity(en, hit, damage));
+                    }
+                    if (majorExp) {
+                        // lets pretend that the infernos came from the entity
+                        // itself (should give us side_front)
+                        vDesc.addAll(deliverInfernoMissiles(en, en, Compute.d6(2), gameManager));
+                    }
+                }
+            }
+            Report.addNewline(vDesc);
+            if (onFire && !hex.containsTerrain(Terrains.FIRE)) {
+                gameManager.ignite(c, Terrains.FIRE_LVL_NORMAL, vDesc);
+            }
+        } else {
+            // report no explosion
+            r.choose(false);
+            vDesc.add(r);
+        }
+    }
+
+    /**
+     * Determine the results of an entity moving through a wall of a building
+     * after having moved a certain distance. This gets called when a Mech or a
+     * Tank enters a building, leaves a building, or travels from one hex to
+     * another inside a multi-hex building.
+     *  @param entity
+     *            - the <code>Entity</code> that passed through a wall. Don't
+     *            pass <code>Infantry</code> units to this method.
+     * @param bldg
+     *            - the <code>Building</code> the entity is passing through.
+     * @param lastPos
+     *            - the <code>Coords</code> of the hex the entity is exiting.
+     * @param curPos
+     *            - the <code>Coords</code> of the hex the entity is entering
+     * @param distance
+     *            - the <code>int</code> number of hexes the entity has moved
+     *            already this phase.
+     * @param why
+     *            - the <code>String</code> explanation for this action.
+     * @param backwards
+     *            - the <code>boolean</code> indicating if the entity is
+     *            entering the hex backwards
+     * @param overallMoveType
+     * @param entering
+     *            - a <code>boolean</code> if the entity is entering or exiting
+     * @param gameManager
+     */
+    protected void passBuildingWall(Entity entity, Building bldg, Coords lastPos, Coords curPos,
+                                    int distance, String why, boolean backwards,
+                                    EntityMovementType overallMoveType, boolean entering, GameManager gameManager) {
+        Report r;
+
+        if (entity instanceof Protomech) {
+            Vector<Report> vBuildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, 1, curPos, gameManager);
+            for (Report report : vBuildingReport) {
+                report.subject = entity.getId();
+            }
+            gameManager.reportManager.addReport(vBuildingReport, gameManager);
+        } else {
+            // Need to roll based on building type.
+            PilotingRollData psr = entity.rollMovementInBuilding(bldg, distance, why, overallMoveType);
+
+            // Did the entity make the roll?
+            if (0 < gameManager.utilityManager.doSkillCheckWhileMoving(entity, entity.getElevation(), lastPos, curPos, psr, false, gameManager)) {
+
+                // Divide the building's current CF by 10, round up.
+                int damage = (int) Math.floor(bldg.getDamageFromScale()
+                        * Math.ceil(bldg.getCurrentCF(entering ? curPos : lastPos) / 10.0));
+
+                // Infantry and Battle armor take different amounts of damage
+                // then Meks and vehicles.
+                if (entity instanceof Infantry) {
+                    damage = bldg.getType() + 1;
+                }
+                // It is possible that the unit takes no damage.
+                if (damage == 0) {
+                    r = new Report(6440);
+                    r.add(entity.getDisplayName());
+                    r.subject = entity.getId();
+                    r.indent(2);
+                    gameManager.addReport(r);
+                } else {
+                    // TW, pg. 268: if unit moves forward, damage from front,
+                    // if backwards, damage from rear.
+                    int side = ToHitData.SIDE_FRONT;
+                    if (backwards) {
+                        side = ToHitData.SIDE_REAR;
+                    }
+                    HitData hit = entity.rollHitLocation(ToHitData.HIT_NORMAL, side);
+                    hit.setGeneralDamageType(HitData.DAMAGE_PHYSICAL);
+                    gameManager.reportManager.addReport(gameManager.damageEntity(entity, hit, damage), gameManager);
+                }
+            }
+
+            // Damage the building. The CF can never drop below 0.
+            int toBldg;
+            // Infantry and BA are damaged by buildings but do not damage them, except large beast-mounted infantry
+            if (entity instanceof Infantry) {
+                InfantryMount mount = ((Infantry) entity).getMount();
+                if ((mount != null) && (mount.getSize().buildingDamage() > 0)) {
+                    toBldg = mount.getSize().buildingDamage();
+                } else {
+                    return;
+                }
+            } else {
+                toBldg = (int) Math.floor(bldg.getDamageToScale()
+                        * Math.ceil(entity.getWeight() / 10.0));
+            }
+            int curCF = bldg.getCurrentCF(entering ? curPos : lastPos);
+            curCF -= Math.min(curCF, toBldg);
+            bldg.setCurrentCF(curCF, entering ? curPos : lastPos);
+
+            // Apply the correct amount of damage to infantry in the building.
+            // ASSUMPTION: We inflict toBldg damage to infantry and
+            // not the amount to bring building to 0 CF.
+            gameManager.reportManager.addReport(gameManager.environmentalEffectManager.damageInfantryIn(bldg, toBldg, entering ? curPos : lastPos, gameManager), gameManager);
+        }
+    }
+
+    /**
+     * check if a building collapses because of a moving entity
+     *
+     * @param bldg
+     *            the <code>Building</code>
+     * @param entity
+     *            the <code>Entity</code>
+     * @param curPos
+     *            the <code>Coords</code> of the position of the entity
+     * @param gameManager
+     * @return a <code>boolean</code> value indicating if the building collapses
+     */
+    protected boolean checkBuildingCollapseWhileMoving(Building bldg, Entity entity, Coords curPos, GameManager gameManager) {
+        Coords oldPos = entity.getPosition();
+        // Count the moving entity in its current position, not
+        // its pre-move position. Be sure to handle nulls.
+        entity.setPosition(curPos);
+
+        // Get the position map of all entities in the game.
+        Hashtable<Coords, Vector<Entity>> positionMap = gameManager.game.getPositionMap();
+
+        // Check for collapse of this building due to overloading, and return.
+        boolean rv = gameManager.environmentalEffectManager.checkForCollapse(bldg, positionMap, curPos, true, gameManager.vPhaseReport, gameManager);
+
+        // If the entity was not displaced and didn't fall, move it back where it was
+        if (curPos.equals(entity.getPosition()) && !entity.isProne()) {
+            entity.setPosition(oldPos);
+        }
+        return rv;
+    }
+
+    /**
+     * Apply the correct amount of damage that passes on to any infantry unit in
+     * the given building, based upon the amount of damage the building just
+     * sustained. This amount is a percentage dictated by pg. 172 of TW.
+     *  @param bldg   - the <code>Building</code> that sustained the damage.
+     * @param damage - the <code>int</code> amount of damage.
+     * @param hexCoords
+     * @param infDamageClass
+     * @param gameManager
+     */
+    public Vector<Report> damageInfantryIn(Building bldg, int damage, Coords hexCoords,
+                                           int infDamageClass, GameManager gameManager) {
+        Vector<Report> vDesc = new Vector<>();
+
+        if (bldg == null) {
+            return vDesc;
+        }
+        // Calculate the amount of damage the infantry will sustain.
+        float percent = bldg.getDamageReductionFromOutside();
+        Report r;
+
+        // Round up at .5 points of damage.
+        int toInf = Math.round(damage * percent);
+
+        // some buildings scale remaining damage
+        toInf = (int) Math.floor(bldg.getDamageToScale() * toInf);
+
+        // Walk through the entities in the game.
+        for (Entity entity : gameManager.game.getEntitiesVector()) {
+            final Coords coords = entity.getPosition();
+
+            // If the entity is infantry in the affected hex?
+            if ((entity instanceof Infantry) && bldg.isIn(coords) && coords.equals(hexCoords)) {
+                // Is the entity is inside of the building
+                // (instead of just on top of it)?
+                if (Compute.isInBuilding(gameManager.game, entity, coords)) {
+
+                    // Report if the infantry receive no points of damage.
+                    if (toInf == 0) {
+                        r = new Report(6445);
+                        r.indent(3);
+                        r.subject = entity.getId();
+                        r.add(entity.getDisplayName());
+                        vDesc.addElement(r);
+                    } else {
+                        // Yup. Damage the entity.
+                        r = new Report(6450);
+                        r.indent(3);
+                        r.subject = entity.getId();
+                        r.add(toInf);
+                        r.add(entity.getDisplayName());
+                        vDesc.addElement(r);
+                        // need to adjust damage to conventional infantry
+                        // TW page 217 says left over damage gets treated as
+                        // direct fire ballistic damage
+                        if (!(entity instanceof BattleArmor)) {
+                            toInf = Compute.directBlowInfantryDamage(toInf, 0,
+                                    WeaponType.WEAPON_DIRECT_FIRE, false, false);
+                        }
+                        int remaining = toInf;
+                        int cluster = toInf;
+                        // Battle Armor units use 5 point clusters.
+                        if (entity instanceof BattleArmor) {
+                            cluster = 5;
+                        }
+                        while (remaining > 0) {
+                            int next = Math.min(cluster, remaining);
+                            HitData hit = entity.rollHitLocation(ToHitData.HIT_NORMAL, ToHitData.SIDE_FRONT);
+                            vDesc.addAll((gameManager.damageEntity(entity, hit, next)));
+                            remaining -= next;
+                        }
+                    }
+
+                    Report.addNewline(vDesc);
+                } // End infantry-inside-building
+            } // End entity-is-infantry-in-building-hex
+        } // Handle the next entity
+
+        return vDesc;
+    } // End protected void damageInfantryIn( Building, int )
+
+    public Vector<Report> damageInfantryIn(Building bldg, int damage, Coords hexCoords, GameManager gameManager) {
+        return damageInfantryIn(bldg, damage, hexCoords, WeaponType.WEAPON_NA, gameManager);
+    }
+
+    /**
+     * Determine if the given building should collapse. If so, inflict the
+     * appropriate amount of damage on each entity in the building and update
+     * the clients. If the building does not collapse, determine if any entities
+     * crash through its floor into its basement. Again, apply appropriate
+     * damage.
+     *
+     * @param bldg
+     *            - the <code>Building</code> being checked. This value should
+     *            not be <code>null</code>.
+     * @param positionMap
+     *            - a <code>Hashtable</code> that maps the <code>Coords</code>
+     *            positions or each unit in the game to a <code>Vector</code> of
+     *            <code>Entity</code>s at that position. This value should not
+     *            be <code>null</code>.
+     * @param coords
+     *            - the <code>Coords</code> of the building hex to be checked
+     * @param checkBecauseOfDamage
+     * @param vPhaseReport
+     * @param gameManager
+     * @return <code>true</code> if the building collapsed.
+     */
+    public boolean checkForCollapse(Building bldg, Hashtable<Coords, Vector<Entity>> positionMap,
+                                    Coords coords, boolean checkBecauseOfDamage,
+                                    Vector<Report> vPhaseReport, GameManager gameManager) {
+
+        // If the input is meaningless, do nothing and throw no exception.
+        if ((bldg == null) || (positionMap == null) || positionMap.isEmpty()
+                || (coords == null) || !bldg.isIn(coords) || !bldg.hasCFIn(coords)) {
+            return false;
+        }
+
+        // Get the building's current CF.
+        int currentCF = bldg.getCurrentCF(coords);
+
+        // Track all units that fall into the building's basement by Coords.
+        Hashtable<Coords, Vector<Entity>> basementMap = new Hashtable<>();
+
+        // look for a collapse.
+        boolean collapse = false;
+
+        boolean basementCollapse = false;
+
+        boolean topFloorCollapse = false;
+
+        if (checkBecauseOfDamage && (currentCF <= 0)) {
+            collapse = true;
+        }
+
+        // Get the Vector of Entities at these coordinates.
+        final Vector<Entity> vector = positionMap.get(coords);
+
+        // Are there any Entities at these coords?
+        if (vector != null) {
+            // How many levels does this building have in this hex?
+            final Hex curHex = gameManager.game.getBoard().getHex(coords);
+            final int numFloors = Math.max(0, curHex.terrainLevel(Terrains.BLDG_ELEV));
+            final int bridgeEl = curHex.terrainLevel(Terrains.BRIDGE_ELEV);
+            int numLoads = numFloors;
+            if (bridgeEl != Terrain.LEVEL_NONE) {
+                numLoads++;
+            }
+            if (numLoads < 1) {
+                LogManager.getLogger().error("Check for collapse: hex " + coords
+                        + " has no bridge or building");
+                return false;
+            }
+
+            // Track the load of each floor (and of the roof) separately.
+            // Track all units that fall into the basement in this hex.
+            // track all floors, ground at index 0, the first floor is at
+            // index 1, the second is at index 1, etc., and the roof is
+            // at index (numFloors).
+            // if bridge is present, bridge will be numFloors+1
+            double[] loads = new double[numLoads + 1];
+            // WiGEs flying over the building are also tracked, but can only collapse the top floor
+            // and only count 25% of their tonnage.
+            double wigeLoad = 0;
+            // track all units that might fall into the basement
+            Vector<Entity> basement = new Vector<>();
+
+            boolean recheckLoop = true;
+            for (int i = 0; (i < 2) && recheckLoop; i++) {
+                recheckLoop = false;
+                Arrays.fill(loads, 0);
+
+                // Walk through the entities in this position.
+                Enumeration<Entity> entities = vector.elements();
+                while (!collapse && entities.hasMoreElements()) {
+                    final Entity entity = entities.nextElement();
+                    // WiGEs can collapse the top floor of a building by flying over it.
+                    final int entityElev = entity.getElevation();
+                    final boolean wigeFlyover = entity.getMovementMode() == EntityMovementMode.WIGE
+                            && entityElev == numFloors + 1;
+
+                    if (entityElev != bridgeEl && !wigeFlyover) {
+                        // Ignore entities not *inside* the building
+                        if (entityElev > numFloors) {
+                            continue;
+                        }
+                    }
+
+                    // if we're under a bridge, we can't collapse the bridge
+                    if (entityElev < bridgeEl) {
+                        continue;
+                    }
+
+                    if ((entity.getMovementMode() == EntityMovementMode.HYDROFOIL)
+                            || (entity.getMovementMode() == EntityMovementMode.NAVAL)
+                            || (entity.getMovementMode() == EntityMovementMode.SUBMARINE)
+                            || (entity.getMovementMode() == EntityMovementMode.INF_UMU)
+                            || entity.hasWorkingMisc(MiscType.F_FULLY_AMPHIBIOUS)) {
+                        continue; // under the bridge even at same level
+                    }
+
+                    if (entityElev == 0) {
+                        basement.add(entity);
+                    }
+
+                    // units already in the basement
+                    if (entityElev < 0) {
+                        continue;
+                    }
+
+                    // Add the weight to the correct floor.
+                    double load = entity.getWeight();
+                    int floor = entityElev;
+                    if (floor == bridgeEl) {
+                        floor = numLoads;
+                    }
+                    // Entities on the roof fall to the previous top floor/new roof
+                    if (topFloorCollapse && floor == numFloors) {
+                        floor--;
+                    }
+
+                    if (wigeFlyover) {
+                        wigeLoad += load;
+                        if (wigeLoad > currentCF * 4) {
+                            topFloorCollapse = true;
+                            loads[numFloors - 1] += loads[numFloors];
+                            loads[numFloors] = 0;
+                        }
+                    } else {
+                        loads[floor] += load;
+                        if (loads[floor] > currentCF) {
+                            // If the load on any floor but the ground floor
+                            // exceeds the building's current CF it collapses.
+                            if (floor != 0) {
+                                collapse = true;
+                            } else if (!bldg.getBasementCollapsed(coords)) {
+                                basementCollapse = true;
+                            }
+                        }
+                    } // End increase-load
+                } // Handle the next entity.
+
+                // Track all entities that fell into the basement.
+                if (basementCollapse) {
+                    basementMap.put(coords, basement);
+                }
+
+                // did anyone fall into the basement?
+                if (!basementMap.isEmpty() && !bldg.getBasement(coords).isNone() && !collapse) {
+                    gameManager.environmentalEffectManager.collapseBasement(bldg, basementMap, coords, vPhaseReport, gameManager);
+                    if (currentCF == 0) {
+                        collapse = true;
+                        recheckLoop = false;
+                    } else {
+                        recheckLoop = true; // basement collapse might cause a further collapse
+                    }
+                } else {
+                    recheckLoop = false; // don't check again, we didn't change the CF
+                }
+                if (collapse) {
+                    recheckLoop = false;
+                    // recheck if the basement collapsed since the basement falls
+                    // might trigger a greater collapse.
+                }
+            } // End have-entities-here
+        }
+
+        // Collapse the building if the flag is set.
+        if (collapse) {
+            Report r = new Report(2375, Report.PUBLIC);
+            r.add(bldg.getName());
+            vPhaseReport.add(r);
+
+            gameManager.environmentalEffectManager.collapseBuilding(bldg, positionMap, coords, false, vPhaseReport, gameManager);
+        } else if (topFloorCollapse) {
+            Report r = new Report(2376, Report.PUBLIC);
+            r.add(bldg.getName());
+            vPhaseReport.add(r);
+
+            gameManager.environmentalEffectManager.collapseBuilding(bldg, positionMap, coords, false, true, vPhaseReport, gameManager);
+        }
+
+        // Return true if the building collapsed.
+        return collapse || topFloorCollapse;
+
+    } // End protected boolean checkForCollapse( Building, Hashtable )
+
+    public void collapseBuilding(Building bldg, Hashtable<Coords, Vector<Entity>> positionMap,
+                                 Coords coords, Vector<Report> vPhaseReport, GameManager gameManager) {
+        gameManager.environmentalEffectManager.collapseBuilding(bldg, positionMap, coords, true, false, vPhaseReport, gameManager);
+    }
+
+    public void collapseBuilding(Building bldg, Hashtable<Coords, Vector<Entity>> positionMap,
+                                 Coords coords, boolean collapseAll, Vector<Report> vPhaseReport, GameManager gameManager) {
+        gameManager.environmentalEffectManager.collapseBuilding(bldg, positionMap, coords, collapseAll, false, vPhaseReport, gameManager);
+    }
+
+    /**
+     * Collapse a building basement. Inflict the appropriate amount of damage on
+     * all entities that fell to the basement. Update all clients.
+     *  @param bldg
+     *            - the <code>Building</code> that has collapsed.
+     * @param positionMap
+     *            - a <code>Hashtable</code> that maps the <code>Coords</code>
+     *            positions or each unit in the game to a <code>Vector</code> of
+     *            <code>Entity</code>s at that position. This value should not
+     *            be <code>null</code>.
+     * @param coords
+     *            - The <code>Coords</code> of the building basement hex that
+     * @param vPhaseReport
+     * @param gameManager
+     */
+    public void collapseBasement(Building bldg, Hashtable<Coords, Vector<Entity>> positionMap,
+                                 Coords coords, Vector<Report> vPhaseReport, GameManager gameManager) {
+        if (!bldg.hasCFIn(coords)) {
+            return;
+        }
+        int runningCFTotal = bldg.getCurrentCF(coords);
+
+        // Get the Vector of Entities at these coordinates.
+        final Vector<Entity> entities = positionMap.get(coords);
+
+        if (bldg.getBasement(coords).isNone()) {
+            return;
+        } else {
+            bldg.collapseBasement(coords, gameManager.game.getBoard(), vPhaseReport);
+        }
+
+        // Are there any Entities at these coords?
+        if (entities != null) {
+
+            // Sort in elevation order
+            entities.sort((a, b) -> {
+                if (a.getElevation() > b.getElevation()) {
+                    return -1;
+                } else if (a.getElevation() > b.getElevation()) {
+                    return 1;
+                }
+                return 0;
+            });
+            // Walk through the entities in this position.
+            for (Entity entity : entities) {
+
+                // int floor = entity.getElevation();
+
+                int cfDamage = (int) Math.ceil(Math.round(entity.getWeight() / 10.0));
+
+                // all entities should fall
+                // ASSUMPTION: PSR to avoid pilot damage
+                PilotingRollData psr = entity.getBasePilotingRoll();
+                entity.addPilotingModifierForTerrain(psr, coords);
+
+                // fall into basement
+                switch (bldg.getBasement(coords)) {
+                    case NONE:
+                    case ONE_DEEP_NORMAL_INFANTRY_ONLY:
+                        LogManager.getLogger().error(entity.getDisplayName() + " is not falling into " + coords.toString());
+                        break;
+                    case TWO_DEEP_HEAD:
+                    case TWO_DEEP_FEET:
+                        LogManager.getLogger().info(entity.getDisplayName() + " is falling 2 floors into " + coords.toString());
+                        // Damage is determined by the depth of the basement, so a fall of 0
+                        // elevation is correct in this case
+                        vPhaseReport.addAll(gameManager.doEntityFall(entity, coords, 0, Compute.d6(), psr,
+                                true, false));
+                        runningCFTotal -= cfDamage * 2;
+                        break;
+                    default:
+                        LogManager.getLogger().info(entity.getDisplayName() + " is falling 1 floor into " + coords.toString());
+                        // Damage is determined by the depth of the basement, so a fall of 0
+                        // elevation is correct in this case
+                        vPhaseReport.addAll(gameManager.doEntityFall(entity, coords, 0, Compute.d6(), psr,
+                                true, false));
+                        runningCFTotal -= cfDamage;
+                        break;
+                }
+
+                // Update this entity.
+                // ASSUMPTION: this is the correct thing to do.
+                gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
+            } // Handle the next entity.
+        }
+
+        // Update the building
+        if (runningCFTotal < 0) {
+            bldg.setCurrentCF(0, coords);
+            bldg.setPhaseCF(0, coords);
+        } else {
+            bldg.setCurrentCF(runningCFTotal, coords);
+            bldg.setPhaseCF(runningCFTotal, coords);
+        }
+        gameManager.communicationManager.sendChangedHex(coords, gameManager);
+        Vector<Building> buildings = new Vector<>();
+        buildings.add(bldg);
+        gameManager.communicationManager.sendChangedBuildings(buildings, gameManager);
+    }
+
+    /**
+     * Collapse a building hex. Inflict the appropriate amount of damage on all
+     * entities in the building. Update all clients.
+     *  @param bldg
+     *            - the <code>Building</code> that has collapsed.
+     * @param positionMap
+     *            - a <code>Hashtable</code> that maps the <code>Coords</code>
+     *            positions or each unit in the game to a <code>Vector</code> of
+     *            <code>Entity</code>s at that position. This value should not
+     *            be <code>null</code>.
+     * @param coords
+     *            - The <code>Coords</code> of the building hex that has
+     *            collapsed
+     * @param collapseAll
+     *            - A <code>boolean</code> indicating whether or not this
+     *            collapse of a hex should be able to collapse the whole
+     *            building
+     * @param topFloor
+     *            - A <code>boolean</code> indicating that only the top floor collapses
+     * @param vPhaseReport
+     * @param gameManager
+     *
+     */
+    public void collapseBuilding(Building bldg, Hashtable<Coords, Vector<Entity>> positionMap,
+                                 Coords coords, boolean collapseAll, boolean topFloor,
+                                 Vector<Report> vPhaseReport, GameManager gameManager) {
+        // sometimes, buildings that reach CF 0 decide against collapsing
+        // but we want them to go away anyway, as a building with CF 0 cannot stand
+        final int phaseCF = bldg.hasCFIn(coords) ? bldg.getPhaseCF(coords) : 0;
+
+        // Loop through the hexes in the building, and apply
+        // damage to all entities inside or on top of the building.
+        Report r;
+
+        // Get the Vector of Entities at these coordinates.
+        final Vector<Entity> vector = positionMap.get(coords);
+
+        // Are there any Entities at these coords?
+        if (vector != null) {
+            // How many levels does this building have in this hex?
+            final Hex curHex = gameManager.game.getBoard().getHex(coords);
+            final int bridgeEl = curHex.terrainLevel(Terrains.BRIDGE_ELEV);
+            final int numFloors = Math.max(bridgeEl,
+                    curHex.terrainLevel(Terrains.BLDG_ELEV));
+
+            // Now collapse the building in this hex, so entities fall to
+            // the ground
+            if (topFloor && numFloors > 1) {
+                curHex.removeTerrain(Terrains.BLDG_ELEV);
+                curHex.addTerrain(new Terrain(Terrains.BLDG_ELEV, numFloors - 1));
+                gameManager.communicationManager.sendChangedHex(coords, gameManager);
+            } else {
+                bldg.setCurrentCF(0, coords);
+                bldg.setPhaseCF(0, coords);
+                gameManager.communicationManager.send(gameManager.packetManager.createCollapseBuildingPacket(coords, gameManager));
+                gameManager.game.getBoard().collapseBuilding(coords);
+            }
+
+            // Sort in elevation order
+            vector.sort((a, b) -> {
+                if (a.getElevation() > b.getElevation()) {
+                    return -1;
+                } else if (a.getElevation() > b.getElevation()) {
+                    return 1;
+                }
+                return 0;
+            });
+            // Walk through the entities in this position.
+            Enumeration<Entity> entities = vector.elements();
+            while (entities.hasMoreElements()) {
+                final Entity entity = entities.nextElement();
+                // all gun emplacements are simply destroyed
+                if (entity instanceof GunEmplacement) {
+                    vPhaseReport.addAll(gameManager.entityActionManager.destroyEntity(entity, "building collapse", gameManager));
+                    gameManager.addNewLines();
+                    continue;
+                }
+
+                int floor = entity.getElevation();
+                // If only the top floor collapses, we only care about units on the top level
+                // or on the roof.
+                if (topFloor && floor < numFloors - 1) {
+                    continue;
+                }
+                // units trapped in a basement under a collapsing building are
+                // destroyed
+                if (floor < 0) {
+                    vPhaseReport.addAll(gameManager.entityActionManager.destroyEntity(entity,
+                            "Crushed under building rubble", false, false, gameManager));
+                }
+
+                // Ignore units above the building / bridge.
+                if (floor > numFloors) {
+                    continue;
+                }
+
+                // Treat units on the roof like
+                // they were in the top floor.
+                if (floor == numFloors) {
+                    floor--;
+                }
+
+                // Calculate collapse damage for this entity.
+                int damage = (int) Math.floor(bldg.getDamageFromScale()
+                        * Math.ceil((phaseCF * (numFloors - floor)) / 10.0));
+
+                // Infantry suffer more damage.
+                if (entity instanceof Infantry) {
+                    if ((entity instanceof BattleArmor) || ((Infantry) entity).isMechanized()) {
+                        damage *= 2;
+                    } else {
+                        damage *= 3;
+                    }
+                }
+
+                // Apply collapse damage the entity.
+                r = new Report(6455);
+                r.indent();
+                r.subject = entity.getId();
+                r.add(entity.getDisplayName());
+                r.add(damage);
+                vPhaseReport.add(r);
+                int remaining = damage;
+                int cluster = damage;
+                if ((entity instanceof BattleArmor) || (entity instanceof Mech)
+                        || (entity instanceof Tank)) {
+                    cluster = 5;
+                }
+                while (remaining > 0) {
+                    int next = Math.min(cluster, remaining);
+                    int table;
+                    if (entity instanceof Protomech) {
+                        table = ToHitData.HIT_SPECIAL_PROTO;
+                    } else if (entity.getElevation() == numFloors) {
+                        table = ToHitData.HIT_NORMAL;
+                    } else {
+                        table = ToHitData.HIT_PUNCH;
+                    }
+                    HitData hit = entity.rollHitLocation(table, ToHitData.SIDE_FRONT);
+                    hit.setGeneralDamageType(HitData.DAMAGE_PHYSICAL);
+                    vPhaseReport.addAll(gameManager.damageEntity(entity, hit, next));
+                    remaining -= next;
+                }
+                vPhaseReport.add(new Report(1210, Report.PUBLIC));
+
+                // all entities should fall
+                floor = entity.getElevation();
+                if ((floor > 0) || (floor == bridgeEl)) {
+                    // ASSUMPTION: PSR to avoid pilot damage
+                    // should use mods for entity damage and
+                    // 20+ points of collapse damage (if any).
+                    PilotingRollData psr = entity.getBasePilotingRoll();
+                    entity.addPilotingModifierForTerrain(psr, coords);
+                    if (damage >= 20) {
+                        psr.addModifier(1, "20+ damage");
+                    }
+                    vPhaseReport.addAll(gameManager.utilityManager.doEntityFallsInto(entity, coords, psr,
+                            true, gameManager));
+                }
+                // Update this entity.
+                // ASSUMPTION: this is the correct thing to do.
+                gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
+            }
+        } else {
+            // Update the building.
+            bldg.setCurrentCF(0, coords);
+            bldg.setPhaseCF(0, coords);
+            gameManager.communicationManager.send(gameManager.packetManager.createCollapseBuildingPacket(coords, gameManager));
+            gameManager.game.getBoard().collapseBuilding(coords);
+        }
+        // if more than half of the hexes are gone, collapse all
+        if (bldg.getCollapsedHexCount() > (bldg.getOriginalHexCount() / 2)) {
+            for (Enumeration<Coords> coordsEnum = bldg.getCoords(); coordsEnum.hasMoreElements();) {
+                coords = coordsEnum.nextElement();
+                collapseBuilding(bldg, gameManager.game.getPositionMap(), coords, false, vPhaseReport, gameManager);
+            }
+        }
+    }
+
+    /**
+     * Apply this phase's damage to all buildings. Buildings may collapse due to
+     * damage.
+     * @param gameManager
+     */
+    void applyBuildingDamage(GameManager gameManager) {
+
+        // Walk through the buildings in the game.
+        // Build the collapse and update vectors as you go.
+        // N.B. never, NEVER, collapse buildings while you are walking through
+        // the Enumeration from megamek.common.Board#getBuildings.
+        Map<Building, Vector<Coords>> collapse = new HashMap<>();
+        Map<Building, Vector<Coords>> update = new HashMap<>();
+        Enumeration<Building> buildings = gameManager.game.getBoard().getBuildings();
+        while (buildings.hasMoreElements()) {
+            Building bldg = buildings.nextElement();
+            Vector<Coords> collapseCoords = new Vector<>();
+            Vector<Coords> updateCoords = new Vector<>();
+            Enumeration<Coords> buildingCoords = bldg.getCoords();
+            while (buildingCoords.hasMoreElements()) {
+                Coords coords = buildingCoords.nextElement();
+                // If the CF is zero, the building should fall.
+                if (bldg.getCurrentCF(coords) == 0) {
+                    collapseCoords.addElement(coords);
+                }
+                // If the building took damage this round, update it.
+                else if (bldg.getPhaseCF(coords) != bldg.getCurrentCF(coords)) {
+                    bldg.setPhaseCF(bldg.getCurrentCF(coords), coords);
+                    updateCoords.addElement(coords);
+                }
+            }
+            collapse.put(bldg, collapseCoords);
+            update.put(bldg, updateCoords);
+        } // Handle the next building
+
+        // If we have any buildings to collapse, collapse them now.
+        if (!collapse.isEmpty()) {
+
+            // Get the position map of all entities in the game.
+            Hashtable<Coords, Vector<Entity>> positionMap = gameManager.game
+                    .getPositionMap();
+
+            // Walk through the hexes that have collapsed.
+            for (Building bldg : collapse.keySet()) {
+                Vector<Coords> coordsVector = collapse.get(bldg);
+                for (Coords coords : coordsVector) {
+                    Report r = new Report(6460, Report.PUBLIC);
+                    r.add(bldg.getName());
+                    gameManager.addReport(r);
+                    collapseBuilding(bldg, positionMap, coords, gameManager.vPhaseReport, gameManager);
+                }
+            }
+        }
+
+        // check for buildings which should collapse due to being overloaded now
+        // CF is reduced
+        if (!update.isEmpty()) {
+            Hashtable<Coords, Vector<Entity>> positionMap = gameManager.game.getPositionMap();
+            for (Building bldg : update.keySet()) {
+                Vector<Coords> updateCoords = update.get(bldg);
+                Vector<Coords> coordsToRemove = new Vector<>();
+                for (Coords coords : updateCoords) {
+                    if (checkForCollapse(bldg, positionMap, coords, false,
+                            gameManager.vPhaseReport, gameManager)) {
+                        coordsToRemove.add(coords);
+                    }
+                }
+                updateCoords.removeAll(coordsToRemove);
+                update.put(bldg, updateCoords);
+            }
+        }
+
+        // If we have any buildings to update, send the message.
+        if (!update.isEmpty()) {
+            gameManager.communicationManager.sendChangedBuildings(new Vector<>(update.keySet()), gameManager);
+        }
+    }
+
+    /**
+     * Apply the given amount of damage to the building. Please note, this
+     * method does <b>not</b> apply any damage to units inside the building,
+     * update the clients, or check for the building's collapse.
+     * <p>
+     * A default message will be used to describe why the building took the
+     * damage.
+     *
+     * @param bldg   - the <code>Building</code> that has been damaged. This value
+     *               should not be <code>null</code>, but no exception will occur.
+     * @param damage - the <code>int</code> amount of damage.
+     * @param coords - the <code>Coords</code> of the building hex to be damaged
+     * @param gameManager
+     * @return a <code>Report</code> to be shown to the players.
+     */
+    public Vector<Report> damageBuilding(Building bldg, int damage,
+                                         Coords coords, GameManager gameManager) {
+        final String defaultWhy = " absorbs ";
+        return gameManager.environmentalEffectManager.damageBuilding(bldg, damage, defaultWhy, coords, gameManager);
+    }
+
+    /**
+     * Apply the given amount of damage to the building. Please note, this
+     * method does <b>not</b> apply any damage to units inside the building,
+     * update the clients, or check for the building's collapse.
+     *
+     * @param bldg   - the <code>Building</code> that has been damaged. This value
+     *               should not be <code>null</code>, but no exception will occur.
+     * @param damage - the <code>int</code> amount of damage.
+     * @param why    - the <code>String</code> message that describes why the
+     *               building took the damage.
+     * @param coords - the <code>Coords</code> of the building hex to be damaged
+     * @param gameManager
+     * @return a <code>Report</code> to be shown to the players.
+     */
+    public Vector<Report> damageBuilding(Building bldg, int damage, String why, Coords coords, GameManager gameManager) {
+        Vector<Report> vPhaseReport = new Vector<>();
+        Report r = new Report(1210, Report.PUBLIC);
+
+        // Do nothing if no building or no damage was passed.
+        if ((bldg != null) && (damage > 0)) {
+            r.messageId = 3435;
+            r.add(bldg.toString());
+            r.add(why);
+            r.add(damage);
+            vPhaseReport.add(r);
+            int curArmor = bldg.getArmor(coords);
+            if (curArmor >= damage) {
+                curArmor -= Math.min(curArmor, damage);
+                bldg.setArmor(curArmor, coords);
+                r = new Report(3436, Report.PUBLIC);
+                r.indent(0);
+                r.add(damage);
+                r.add(curArmor);
+                vPhaseReport.add(r);
+            } else {
+                r.add(damage);
+                if (curArmor > 0) {
+                    bldg.setArmor(0, coords);
+                    damage = damage - curArmor;
+                    r = new Report(3436, Report.PUBLIC);
+                    r.indent(0);
+                    r.add(curArmor);
+                    r.add(0);
+                    vPhaseReport.add(r);
+                }
+                damage = (int) Math.floor(bldg.getDamageToScale() * damage);
+                if (bldg.getDamageToScale() < 1.0) {
+                    r = new Report(3437, Report.PUBLIC);
+                    r.indent(0);
+                    r.add(damage);
+                    vPhaseReport.add(r);
+                }
+                if (bldg.getDamageToScale() > 1.0) {
+                    r = new Report(3438, Report.PUBLIC);
+                    r.indent(0);
+                    r.add(damage);
+                    vPhaseReport.add(r);
+                }
+                int curCF = bldg.getCurrentCF(coords);
+                final int startingCF = curCF;
+                curCF -= Math.min(curCF, damage);
+                bldg.setCurrentCF(curCF, coords);
+
+                r = new Report(6436, Report.PUBLIC);
+                r.indent(1);
+                if (curCF <= 0) {
+                    r.add(r.warning(String.valueOf(curCF)));
+                } else {
+                    r.add(curCF);
+                }
+                vPhaseReport.add(r);
+
+                final int damageThresh = (int) Math.ceil(bldg.getPhaseCF(coords) / 10.0);
+
+                // If the CF is zero, the building should fall.
+                if ((curCF == 0) && (startingCF != 0)) {
+                    if (bldg instanceof FuelTank) {
+                        // If this is a fuel tank, we'll give it its own
+                        // message.
+                        r = new Report(3441);
+                        r.type = Report.PUBLIC;
+                        r.indent(0);
+                        vPhaseReport.add(r);
+                        // ...But we ALSO need to blow up everything nearby.
+                        // Bwahahahahaha...
+                        r = new Report(3560);
+                        r.type = Report.PUBLIC;
+                        r.newlines = 1;
+                        vPhaseReport.add(r);
+                        Vector<Report> vRep = new Vector<>();
+                        gameManager.doExplosion(((FuelTank) bldg).getMagnitude(), 10,
+                                false, bldg.getCoords().nextElement(), true,
+                                vRep, null, -1);
+                        Report.indentAll(vRep, 2);
+                        vPhaseReport.addAll(vRep);
+                        return vPhaseReport;
+                    }
+                    if (bldg.getType() == Building.WALL) {
+                        r = new Report(3442);
+                        r.type = Report.PUBLIC;
+                        r.indent(0);
+                        vPhaseReport.add(r);
+                    } else {
+                        r = new Report(3440);
+                        r.type = Report.PUBLIC;
+                        r.indent(0);
+                        vPhaseReport.add(r);
+                    }
+                } else if ((curCF < startingCF) && (damage > damageThresh)) {
+                    // need to check for crits
+                    // don't bother unless we have some gun emplacements
+                    Vector<GunEmplacement> guns = gameManager.game.getGunEmplacements(coords);
+                    if (!guns.isEmpty()) {
+                        vPhaseReport.addAll(gameManager.environmentalEffectManager.criticalGunEmplacement(guns, bldg, coords, gameManager));
+                    }
+                }
+            }
+        }
+        Report.indentAll(vPhaseReport, 2);
+        return vPhaseReport;
+    }
+
+    protected Vector<Report> criticalGunEmplacement(Vector<GunEmplacement> guns, Building bldg,
+                                                    Coords coords, GameManager gameManager) {
+        Vector<Report> vDesc = new Vector<>();
+        Report r;
+        r = new Report(3800);
+        r.type = Report.PUBLIC;
+        r.indent(0);
+        vDesc.add(r);
+
+        int critRoll = Compute.d6(2);
+        if (critRoll < 6) {
+            r = new Report(3805);
+            r.type = Report.PUBLIC;
+            r.indent(1);
+            vDesc.add(r);
+        } else if (critRoll == 6) {
+            // weapon malfunction
+            // lets just randomly determine which weapon gets hit
+            Vector<Mounted> wpns = new Vector<>();
+            for (GunEmplacement gun : guns) {
+                for (Mounted wpn : gun.getWeaponList()) {
+                    if (!wpn.isHit() && !wpn.isJammed()
+                            && !wpn.jammedThisPhase()) {
+                        wpns.add(wpn);
+                    }
+                }
+            }
+
+            if (!wpns.isEmpty()) {
+                Mounted weapon = wpns.elementAt(Compute.randomInt(wpns.size()));
+                weapon.setJammed(true);
+                ((GunEmplacement) weapon.getEntity()).addJammedWeapon(weapon);
+                r = new Report(3845);
+                r.type = Report.PUBLIC;
+                r.indent(1);
+                r.add(weapon.getDesc());
+            } else {
+                r = new Report(3846);
+                r.type = Report.PUBLIC;
+                r.indent(1);
+            }
+            vDesc.add(r);
+        } else if (critRoll == 7) {
+            // gunners stunned
+            for (GunEmplacement gun : guns) {
+                gun.stunCrew();
+                r = new Report(3810);
+                r.type = Report.PUBLIC;
+                r.indent(1);
+                vDesc.add(r);
+            }
+        } else if (critRoll == 8) {
+            // weapon destroyed
+            // lets just randomly determine which weapon gets hit
+            Vector<Mounted> wpns = new Vector<>();
+            for (GunEmplacement gun : guns) {
+                for (Mounted wpn : gun.getWeaponList()) {
+                    if (!wpn.isHit()) {
+                        wpns.add(wpn);
+                    }
+                }
+            }
+
+            if (!wpns.isEmpty()) {
+                Mounted weapon = wpns.elementAt(Compute.randomInt(wpns.size()));
+                weapon.setHit(true);
+                r = new Report(3840);
+                r.type = Report.PUBLIC;
+                r.indent(1);
+                r.add(weapon.getDesc());
+            } else {
+                r = new Report(3841);
+                r.type = Report.PUBLIC;
+                r.indent(1);
+            }
+            vDesc.add(r);
+        } else if (critRoll == 9) {
+            // gunners killed
+            r = new Report(3815);
+            r.type = Report.PUBLIC;
+            r.indent(1);
+            vDesc.add(r);
+            for (GunEmplacement gun : guns) {
+                gun.getCrew().setDoomed(true);
+            }
+        } else if (critRoll == 10) {
+            if (Compute.d6() > 3) {
+                // turret lock
+                r = new Report(3820);
+                r.type = Report.PUBLIC;
+                r.indent(1);
+                vDesc.add(r);
+                for (GunEmplacement gun : guns) {
+                    gun.lockTurret(gun.getLocTurret());
+                }
+            } else {
+                // turret jam
+                r = new Report(3825);
+                r.type = Report.PUBLIC;
+                r.indent(1);
+                vDesc.add(r);
+                for (GunEmplacement gun : guns) {
+                    if (gun.isTurretEverJammed(gun.getLocTurret())) {
+                        gun.lockTurret(gun.getLocTurret());
+                    } else {
+                        gun.jamTurret(gun.getLocTurret());
+                    }
+                }
+            }
+        } else if (critRoll == 11) {
+            r = new Report(3830);
+            r.type = Report.PUBLIC;
+            r.indent(1);
+            r.add(bldg.getName());
+            int boom = 0;
+            for (GunEmplacement gun : guns) {
+                for (Mounted ammo : gun.getAmmo()) {
+                    ammo.setHit(true);
+                    if (ammo.getType().isExplosive(ammo)) {
+                        boom += ammo.getHittableShotsLeft()
+                                * ((AmmoType) ammo.getType())
+                                .getDamagePerShot()
+                                * ((AmmoType) ammo.getType()).getRackSize();
+                    }
+                }
+            }
+            boom = (int) Math.floor(bldg.getDamageToScale() * boom);
+
+            if (boom == 0) {
+                Report rNoAmmo = new Report(3831);
+                rNoAmmo.type = Report.PUBLIC;
+                rNoAmmo.indent(1);
+                vDesc.add(rNoAmmo);
+                return vDesc;
+            }
+
+            r.add(boom);
+            int curCF = bldg.getCurrentCF(coords);
+            curCF -= Math.min(curCF, boom);
+            bldg.setCurrentCF(curCF, coords);
+            r.add(bldg.getCurrentCF(coords));
+            vDesc.add(r);
+            // If the CF is zero, the building should fall.
+            if ((curCF == 0) && (bldg.getPhaseCF(coords) != 0)) {
+
+                // when a building collapses due to an ammo explosion, we can consider
+                // that turret annihilated for the purposes of salvage.
+                for (GunEmplacement gun : guns) {
+                    vDesc.addAll(gameManager.entityActionManager.destroyEntity(gun, "ammo explosion", false, false, gameManager));
+                }
+
+                if (bldg instanceof FuelTank) {
+                    // If this is a fuel tank, we'll give it its own
+                    // message.
+                    r = new Report(3441);
+                    r.type = Report.PUBLIC;
+                    r.indent(0);
+                    vDesc.add(r);
+                    // ...But we ALSO need to blow up everything nearby.
+                    // Bwahahahahaha...
+                    r = new Report(3560);
+                    r.type = Report.PUBLIC;
+                    r.newlines = 1;
+                    vDesc.add(r);
+                    Vector<Report> vRep = new Vector<>();
+                    gameManager.doExplosion(((FuelTank) bldg).getMagnitude(), 10, false,
+                            bldg.getCoords().nextElement(), true, vRep, null,
+                            -1);
+                    Report.indentAll(vRep, 2);
+                    vDesc.addAll(vRep);
+                    return gameManager.vPhaseReport;
+                }
+                if (bldg.getType() == Building.WALL) {
+                    r = new Report(3442);
+                } else {
+                    r = new Report(3440);
+                }
+                r.type = Report.PUBLIC;
+                r.indent(0);
+                vDesc.add(r);
+            }
+        } else if (critRoll == 12) {
+            // non-weapon equipment is hit
+            Vector<Mounted> equipmentList = new Vector<>();
+            for (GunEmplacement gun : guns) {
+                for (Mounted equipment : gun.getMisc()) {
+                    if (!equipment.isHit()) {
+                        equipmentList.add(equipment);
+                    }
+                }
+            }
+
+            if (!equipmentList.isEmpty()) {
+                Mounted equipment = equipmentList.elementAt(Compute.randomInt(equipmentList.size()));
+                equipment.setHit(true);
+                r = new Report(3840);
+                r.type = Report.PUBLIC;
+                r.indent(1);
+                r.add(equipment.getDesc());
+            } else {
+                r = new Report(3835);
+                r.type = Report.PUBLIC;
+                r.indent(1);
+            }
+            vDesc.add(r);
+        }
+
+        return vDesc;
+    }
+
+    /**
+     * For all current artillery attacks in the air from this entity with this
+     * weapon, clear the list of spotters. Needed because firing another round
+     * before first lands voids spotting.
+     *  @param entityID the <code>int</code> id of the entity
+     * @param weaponID the <code>int</code> id of the weapon
+     * @param gameManager
+     */
+    protected void clearArtillerySpotters(int entityID, int weaponID, GameManager gameManager) {
+        for (Enumeration<AttackHandler> i = gameManager.game.getAttacks(); i.hasMoreElements(); ) {
+            WeaponHandler wh = (WeaponHandler) i.nextElement();
+            if ((wh.waa instanceof ArtilleryAttackAction)
+                    && (wh.waa.getEntityId() == entityID)
+                    && (wh.waa.getWeaponId() == weaponID)) {
+                ArtilleryAttackAction aaa = (ArtilleryAttackAction) wh.waa;
+                aaa.setSpotterIds(null);
+            }
+        }
+    }
+
+    /**
+     * resolve the landing of an assault drop
+     *
+     * @param entity the <code>Entity</code> for which to resolve it
+     * @param gameManager
+     */
+    public void doAssaultDrop(Entity entity, GameManager gameManager) {
+        //resolve according to SO p.22
+
+        Report r = new Report(2380);
+
+        // whatever else happens, this entity is on the ground now
+        entity.setAltitude(0);
+
+        PilotingRollData psr;
+        // LAMs that convert to fighter mode on the landing turn are processed as crashes
+        if ((entity instanceof LandAirMech)
+                && (entity.getConversionMode() == LandAirMech.CONV_MODE_FIGHTER)) {
+            gameManager.reportManager.addReport(gameManager.entityActionManager.processCrash(entity, 0, entity.getPosition(), gameManager), gameManager);
+            return;
+        }
+        if ((entity instanceof Protomech) || (entity instanceof BattleArmor)) {
+            psr = new PilotingRollData(entity.getId(), 5, "landing assault drop");
+        } else if (entity instanceof Infantry) {
+            psr = new PilotingRollData(entity.getId(), 4, "landing assault drop");
+        } else {
+            psr = entity.getBasePilotingRoll();
+        }
+        Roll diceRoll = Compute.rollD6(2);
+        // check for a safe landing
+        gameManager.addNewLines();
+        r.subject = entity.getId();
+        r.add(entity.getDisplayName(), true);
+        r.add(psr);
+        r.add(diceRoll);
+        r.newlines = 1;
+        r.choose(diceRoll.getIntValue() >= psr.getValue());
+        gameManager.addReport(r);
+
+        // if we are on an atmospheric map or the entity is off the map for some reason
+        if (gameManager.game.getBoard().inAtmosphere() || entity.getPosition() == null) {
+            // then just remove the entity
+            // TODO : for this and when the unit scatters off the board, we should really still
+            // TODO : apply damage before we remove, but this causes all kinds of problems for
+            // TODO : doEntityFallsInto and related methods which expect a coord on the board
+            // TODO : - need to make those more robust
+            r = new Report(2388);
+            gameManager.addReport(r);
+            r.subject = entity.getId();
+            r.add(entity.getDisplayName(), true);
+            gameManager.game.removeEntity(entity.getId(), IEntityRemovalConditions.REMOVE_IN_RETREAT);
+            return;
+        }
+
+        if (diceRoll.getIntValue() < psr.getValue()) {
+            int fallHeight = psr.getValue() - diceRoll.getIntValue();
+
+            // if you fail by more than 7, you automatically fail
+            if (fallHeight > 7) {
+                gameManager.reportManager.addReport(gameManager.entityActionManager.destroyEntity(entity, "failed assault drop", false, false, gameManager), gameManager);
+                gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
+                return;
+            }
+
+            // determine where we really land
+            Coords c = Compute.scatterAssaultDrop(entity.getPosition(), fallHeight);
+            int distance = entity.getPosition().distance(c);
+            r = new Report(2385);
+            r.subject = entity.getId();
+            r.add(distance);
+            r.indent();
+            r.newlines = 0;
+            gameManager.addReport(r);
+            if (!gameManager.game.getBoard().contains(c)) {
+                r = new Report(2386);
+                r.subject = entity.getId();
+                gameManager.addReport(r);
+                gameManager.game.removeEntity(entity.getId(), IEntityRemovalConditions.REMOVE_IN_RETREAT);
+                return;
+            } else {
+                r = new Report(2387);
+                r.subject = entity.getId();
+                r.add(c.getBoardNum());
+                gameManager.addReport(r);
+            }
+            entity.setPosition(c);
+
+            // do fall damage from accidental fall
+            //set elevation to fall height above ground or building roof
+            Hex hex = gameManager.game.getBoard().getHex(entity.getPosition());
+            int bldgElev = hex.containsTerrain(Terrains.BLDG_ELEV)
+                    ? hex.terrainLevel(Terrains.BLDG_ELEV) : 0;
+            entity.setElevation(fallHeight + bldgElev);
+            if (entity.isConventionalInfantry()) {
+                HitData hit = new HitData(Infantry.LOC_INFANTRY);
+                gameManager.reportManager.addReport(gameManager.damageEntity(entity, hit, 1), gameManager);
+                // LAMs that convert to fighter mode on the landing turn are processed as crashes regardless of roll
+            } else {
+                gameManager.reportManager.addReport(gameManager.utilityManager.doEntityFallsInto(entity, c, psr, true, gameManager), gameManager);
+            }
+        } else {
+            // set entity to expected elevation
+            Hex hex = gameManager.game.getBoard().getHex(entity.getPosition());
+            int bldgElev = hex.containsTerrain(Terrains.BLDG_ELEV)
+                    ? hex.terrainLevel(Terrains.BLDG_ELEV) : 0;
+            entity.setElevation(bldgElev);
+
+            Building bldg = gameManager.game.getBoard().getBuildingAt(entity.getPosition());
+            if (bldg != null) {
+                // whoops we step on the roof
+                checkBuildingCollapseWhileMoving(bldg, entity, entity.getPosition(), gameManager);
+            }
+
+            // finally, check for any stacking violations
+            Entity violated = Compute.stackingViolation(gameManager.game, entity, entity.getPosition(), null, entity.climbMode());
+            if (violated != null) {
+                // StratOps explicitly says that this is not treated as an accident
+                // fall from above
+                // so we just need to displace the violating unit
+                // check to see if the violating unit is a DropShip and if so, then
+                // displace the unit dropping instead
+                if (violated instanceof Dropship) {
+                    violated = entity;
+                }
+                Coords targetDest = Compute.getValidDisplacement(gameManager.game, violated.getId(),
+                        violated.getPosition(), Compute.d6() - 1);
+                if (null != targetDest) {
+                    gameManager.utilityManager.doEntityDisplacement(violated, violated.getPosition(), targetDest, null, gameManager);
+                    gameManager.entityActionManager.entityUpdate(violated.getId(), gameManager);
+                } else {
+                    // ack! automatic death! Tanks
+                    // suffer an ammo/power plant hit.
+                    // TODO : a Mech suffers a Head Blown Off crit.
+                    gameManager.vPhaseReport.addAll(gameManager.entityActionManager.destroyEntity(entity, "impossible displacement",
+                            entity instanceof Mech, entity instanceof Mech, gameManager));
+                }
+            }
+        }
+    }
+
+    /**
+     * resolve assault drops for all entities
+     * @param gameManager
+     */
+    void doAllAssaultDrops(GameManager gameManager) {
+        for (Entity e : gameManager.game.getEntitiesVector()) {
+            if (e.isAssaultDropInProgress() && e.isDeployed()) {
+                doAssaultDrop(e, gameManager);
+                e.setLandedAssaultDrop();
+            }
+        }
+    }
+
+    /**
+     * do damage from magma
+     *  @param en       the affected <code>Entity</code>
+     * @param eruption <code>boolean</code> indicating whether or not this is because
+     * @param gameManager
+     */
+    public void doMagmaDamage(Entity en, boolean eruption, GameManager gameManager) {
+        if ((((en.getMovementMode() == EntityMovementMode.VTOL) && (en.getElevation() > 0))
+                || (en.getMovementMode() == EntityMovementMode.HOVER)
+                || ((en.getMovementMode() == EntityMovementMode.WIGE)
+                && (en.getOriginalWalkMP() > 0) && !eruption)) && !en.isImmobile()) {
+            return;
+        }
+        Report r;
+        boolean isMech = en instanceof Mech;
+        if (isMech) {
+            r = new Report(2405);
+        } else {
+            r = new Report(2400);
+        }
+        r.addDesc(en);
+        r.subject = en.getId();
+        gameManager.addReport(r);
+        if (isMech) {
+            HitData h;
+            for (int i = 0; i < en.locations(); i++) {
+                if (eruption || en.locationIsLeg(i) || en.isProne()) {
+                    h = new HitData(i);
+                    gameManager.reportManager.addReport(gameManager.damageEntity(en, h, Compute.d6(2)), gameManager);
+                }
+            }
+        } else {
+            gameManager.reportManager.addReport(gameManager.entityActionManager.destroyEntity(en, "fell into magma", false, false, gameManager), gameManager);
+        }
+        gameManager.addNewLines();
+    }
+
+    /**
+     * Applies damage to any eligible unit hit by anti-TSM missiles or entering
+     * a hex with green smoke.
+     *
+     * @param entity An entity subject to anti-TSM damage
+     * @param gameManager
+     * @return The damage reports
+     */
+    public Vector<Report> doGreenSmokeDamage(Entity entity, GameManager gameManager) {
+        Vector<Report> reports = new Vector<>();
+        // ignore if we're flying over the smoke or we're already toast
+        if ((entity.getElevation() >= 2) || entity.isDestroyed() || entity.isDoomed()) {
+            return reports;
+        }
+        Report r = new Report(6432);
+        r.subject = entity.getId();
+        r.addDesc(entity);
+        reports.add(r);
+        if (entity.isConventionalInfantry()) {
+            reports.addAll(gameManager.damageEntity(entity, new HitData(Infantry.LOC_INFANTRY), Compute.d6()));
+        } else {
+            for (int loc = 0; loc < entity.locations(); loc++) {
+                if ((entity.getArmor(loc) <= 0 || (entity.hasRearArmor(loc) && (entity.getArmor(loc, true) < 0)))
+                        && !entity.isLocationBlownOff(loc)) {
+                    r = new Report(6433);
+                    r.subject = entity.getId();
+                    r.add(entity.getLocationName(loc));
+                    r.indent(1);
+                    reports.add(r);
+                    reports.addAll(gameManager.damageEntity(entity, new HitData(loc), 6, false,
+                            DamageType.ANTI_TSM, true));
+                }
+            }
+        }
+        // Only report if the exposure has some effect
+        if (reports.size() == 1) {
+            reports.clear();
+        }
+        return reports;
+    }
+
+    /**
+     * sink any entities in quicksand in the current hex
+     * @param en
+     * @param gameManager
+     */
+    public void doSinkEntity(Entity en, GameManager gameManager) {
+        Report r;
+        r = new Report(2445);
+        r.addDesc(en);
+        r.subject = en.getId();
+        gameManager.addReport(r);
+        en.setElevation(en.getElevation() - 1);
+        // if this means the entity is below the ground, then bye-bye!
+        if (Math.abs(en.getElevation()) > en.getHeight()) {
+            gameManager.reportManager.addReport(gameManager.entityActionManager.destroyEntity(en, "quicksand", gameManager), gameManager);
+        }
+    }
+
+    /**
+     * deal area saturation damage to an individual hex
+     *  @param coords         The hex being hit
+     * @param attackSource   The location the attack came from. For hit table resolution
+     * @param damage         Amount of damage to deal to each entity
+     * @param ammo           The ammo type being used
+     * @param subjectId      Subject for reports
+     * @param killer         Who should be credited with kills
+     * @param exclude        Entity that should take no damage (used for homing splash)
+     * @param flak           Flak, hits flying units only, instead of flyers being immune
+     * @param altitude       Absolute altitude for flak attack
+     * @param vPhaseReport   The Vector of Reports for the phase report
+     * @param asfFlak        Is this flak against ASF?
+     * @param alreadyHit     a vector of unit ids for units that have already been hit that
+     *                       will be ignored
+     * @param variableDamage if true, treat damage as the number of six-sided dice to roll
+     * @param gameManager
+     */
+    public Vector<Integer> artilleryDamageHex(Coords coords,
+                                              Coords attackSource, int damage, AmmoType ammo, int subjectId,
+                                              Entity killer, Entity exclude, boolean flak, int altitude,
+                                              Vector<Report> vPhaseReport, boolean asfFlak,
+                                              Vector<Integer> alreadyHit, boolean variableDamage, GameManager gameManager) {
+
+        Hex hex = gameManager.game.getBoard().getHex(coords);
+        if (hex == null) {
+            return alreadyHit; // not on board.
+        }
+
+        Report r;
+
+        // Non-flak artillery damages terrain
+        if (!flak) {
+            // Report that damage applied to terrain, if there's TF to damage
+            Hex h = gameManager.game.getBoard().getHex(coords);
+            if ((h != null) && h.hasTerrainFactor()) {
+                r = new Report(3384);
+                r.indent(2);
+                r.subject = subjectId;
+                r.add(coords.getBoardNum());
+                r.add(damage * 2);
+                vPhaseReport.addElement(r);
+            }
+            // Update hex and report any changes
+            Vector<Report> newReports = tryClearHex(coords, damage * 2, subjectId, gameManager);
+            for (Report nr : newReports) {
+                nr.indent(3);
+            }
+            vPhaseReport.addAll(newReports);
+        }
+
+        boolean isFuelAirBomb =
+                ammo != null &&
+                        (BombType.getBombTypeFromInternalName(ammo.getInternalName()) == BombType.B_FAE_SMALL ||
+                                BombType.getBombTypeFromInternalName(ammo.getInternalName()) == BombType.B_FAE_LARGE);
+
+        Building bldg = gameManager.game.getBoard().getBuildingAt(coords);
+        int bldgAbsorbs = 0;
+        if ((bldg != null)
+                && !(flak && (((altitude > hex.terrainLevel(Terrains.BLDG_ELEV))
+                || (altitude > hex.terrainLevel(Terrains.BRIDGE_ELEV)))))) {
+            bldgAbsorbs = bldg.getAbsorbtion(coords);
+            if (!((ammo != null) && (ammo.getMunitionType().contains(AmmoType.Munitions.M_FLECHETTE)))) {
+                int actualDamage = damage;
+
+                if (isFuelAirBomb) {
+                    // light buildings take 1.5x damage from fuel-air bombs
+                    if (bldg.getType() == Building.LIGHT) {
+                        actualDamage = (int) Math.ceil(actualDamage * 1.5);
+
+                        r = new Report(9991);
+                        r.indent(1);
+                        r.subject = killer.getId();
+                        r.newlines = 1;
+                        vPhaseReport.addElement(r);
+                    }
+
+                    // armored and "castle brian" buildings take .5 damage from fuel-air bombs
+                    // but I have no idea how to determine if a building is a castle or a brian
+                    // note that being armored and being "light" are not mutually exclusive
+                    if (bldg.getArmor(coords) > 0) {
+                        actualDamage = (int) Math.floor(actualDamage * .5);
+
+                        r = new Report(9992);
+                        r.indent(1);
+                        r.subject = killer.getId();
+                        r.newlines = 1;
+                        vPhaseReport.addElement(r);
+                    }
+                }
+
+
+                // damage the building
+                Vector<Report> buildingReport = damageBuilding(bldg, actualDamage, coords, gameManager);
+                for (Report report : buildingReport) {
+                    report.subject = subjectId;
+                }
+                vPhaseReport.addAll(buildingReport);
+            }
+        }
+
+        if (flak && ((altitude <= 0)
+                || (altitude <= hex.terrainLevel(Terrains.BLDG_ELEV))
+                || (altitude == hex.terrainLevel(Terrains.BRIDGE_ELEV)))) {
+            // Flak in this hex would only hit landed units
+            return alreadyHit;
+        }
+
+        // get units in hex
+        for (Entity entity : gameManager.game.getEntitiesVector(coords)) {
+            // Check: is entity excluded?
+            if ((entity == exclude) || alreadyHit.contains(entity.getId())) {
+                continue;
+            } else {
+                alreadyHit.add(entity.getId());
+            }
+
+            AreaEffectHelper.artilleryDamageEntity(entity, damage, bldg, bldgAbsorbs,
+                    variableDamage, asfFlak, flak, altitude,
+                    attackSource, ammo, coords, isFuelAirBomb,
+                    killer, hex, subjectId, vPhaseReport, gameManager);
+        }
+
+        return alreadyHit;
+    }
+
+    /**
+     * deal area saturation damage to the map, used for artillery
+     *  @param centre       The hex on which damage is centred
+     * @param attackSource The position the attack came from
+     * @param ammo         The ammo type doing the damage
+     * @param subjectId    Subject for reports
+     * @param killer       Who should be credited with kills
+     * @param flak         Flak, hits flying units only, instead of flyers being immune
+     * @param altitude     Absolute altitude for flak attack
+     * @param mineClear    Does this clear mines?
+     * @param vPhaseReport The Vector of Reports for the phase report
+     * @param asfFlak      Is this flak against ASF?
+     * @param attackingBA  How many BA suits are in the squad if this is a BA Tube arty
+     * @param gameManager
+     */
+    public void artilleryDamageArea(Coords centre, Coords attackSource,
+                                    AmmoType ammo, int subjectId, Entity killer, boolean flak,
+                                    int altitude, boolean mineClear, Vector<Report> vPhaseReport,
+                                    boolean asfFlak, int attackingBA, GameManager gameManager) {
+        AreaEffectHelper.DamageFalloff damageFalloff = AreaEffectHelper.calculateDamageFallOff(ammo, attackingBA, mineClear);
+
+        int damage = damageFalloff.damage;
+        int falloff = damageFalloff.falloff;
+        if (damageFalloff.clusterMunitionsFlag) {
+            attackSource = centre;
+        }
+
+        gameManager.environmentalEffectManager.artilleryDamageArea(centre, attackSource, ammo, subjectId, killer,
+                damage, falloff, flak, altitude, vPhaseReport, asfFlak, gameManager);
+    }
+
+    /**
+     * Deals area-saturation damage to an area of the board. Used for artillery,
+     * bombs, or anything else with linear decrease in damage
+     *  @param centre
+     *            The hex on which damage is centred
+     * @param attackSource
+     *            The position the attack came from
+     * @param ammo
+     *            The ammo type doing the damage
+     * @param subjectId
+     *            Subject for reports
+     * @param killer
+     *            Who should be credited with kills
+     * @param damage
+     *            Damage at ground zero
+     * @param falloff
+     *            Reduction in damage for each hex of distance
+     * @param flak
+     *            Flak, hits flying units only, instead of flyers being immune
+     * @param altitude
+     *            Absolute altitude for flak attack
+     * @param vPhaseReport
+     *            The Vector of Reports for the phase report
+     * @param asfFlak
+     * @param gameManager
+     */
+    public void artilleryDamageArea(Coords centre, Coords attackSource, AmmoType ammo, int subjectId,
+                                    Entity killer, int damage, int falloff, boolean flak, int altitude,
+                                    Vector<Report> vPhaseReport, boolean asfFlak, GameManager gameManager) {
+        Vector<Integer> alreadyHit = new Vector<>();
+        for (int ring = 0; damage > 0; ring++, damage -= falloff) {
+            List<Coords> hexes = centre.allAtDistance(ring);
+            for (Coords c : hexes) {
+                alreadyHit = artilleryDamageHex(c, attackSource, damage, ammo,
+                        subjectId, killer, null, flak, altitude, vPhaseReport,
+                        asfFlak, alreadyHit, false, gameManager);
+            }
+            attackSource = centre; // all splash comes from ground zero
+        }
+    }
+
+    public void deliverBombDamage(Coords centre, int type, int subjectId, Entity killer,
+                                  Vector<Report> vPhaseReport, GameManager gameManager) {
+        int range = 0;
+        int damage = 10;
+        if (type == BombType.B_CLUSTER) {
+            range = 1;
+            damage = 5;
+        }
+        Vector<Integer> alreadyHit = new Vector<>();
+
+        // We need the actual ammo type in order to handle certain bomb issues correctly.
+        BombType ammo = BombType.createBombByType(type);
+
+        alreadyHit = artilleryDamageHex(centre, centre, damage, ammo,
+                subjectId, killer, null, false, 0, vPhaseReport, false,
+                alreadyHit, false, gameManager);
+        if (range > 0) {
+            List<Coords> hexes = centre.allAtDistance(range);
+            for (Coords c : hexes) {
+                alreadyHit = artilleryDamageHex(c, centre, damage, ammo,
+                        subjectId, killer, null, false, 0, vPhaseReport, false,
+                        alreadyHit, false, gameManager);
+            }
+        }
+    }
+
+    /**
+     * deliver inferno bomb
+     *  @param coords    the <code>Coords</code> where to deliver
+     * @param ae        the attacking <code>entity</code>
+     * @param subjectId the <code>int</code> id of the target
+     * @param vPhaseReport
+     * @param gameManager
+     */
+    public void deliverBombInferno(Coords coords, Entity ae, int subjectId,
+                                   Vector<Report> vPhaseReport, GameManager gameManager) {
+        Hex h = gameManager.game.getBoard().getHex(coords);
+        Report r;
+        // Unless there is a fire in the hex already, start one.
+        if (h.terrainLevel(Terrains.FIRE) < Terrains.FIRE_LVL_INFERNO_BOMB) {
+            gameManager.ignite(coords, Terrains.FIRE_LVL_INFERNO_BOMB, vPhaseReport);
+        }
+        // possibly melt ice and snow
+        if (h.containsTerrain(Terrains.ICE) || h.containsTerrain(Terrains.SNOW)) {
+            vPhaseReport.addAll(gameManager.entityActionManager.meltIceAndSnow(coords, subjectId, gameManager));
+        }
+        for (Entity entity : gameManager.game.getEntitiesVector(coords)) {
+            if (entity.isAirborne() || entity.isAirborneVTOLorWIGE()) {
+                continue;
+            }
+            // TacOps, p. 359 - treat as if hit by 5 inferno missiles
+            r = new Report(6696);
+            r.indent(3);
+            r.add(entity.getDisplayName());
+            r.subject = entity.getId();
+            r.newlines = 0;
+            vPhaseReport.add(r);
+            if (entity instanceof Tank) {
+                Report.addNewline(vPhaseReport);
+            }
+            Vector<Report> vDamageReport = deliverInfernoMissiles(ae, entity, 5, gameManager);
+            Report.indentAll(vDamageReport, 2);
+            vPhaseReport.addAll(vDamageReport);
+        }
+    }
+
+    /**
+     * Resolve any Infantry units which are fortifying hexes
+     * @param gameManager
+     */
+    void resolveFortify(GameManager gameManager) {
+        Report r;
+        for (Entity ent : gameManager.game.getEntitiesVector()) {
+            if (ent instanceof Infantry) {
+                Infantry inf = (Infantry) ent;
+                int dig = inf.getDugIn();
+                if (dig == Infantry.DUG_IN_WORKING) {
+                    r = new Report(5300);
+                    r.addDesc(inf);
+                    r.subject = inf.getId();
+                    gameManager.addReport(r);
+                } else if (dig == Infantry.DUG_IN_FORTIFYING3) {
+                    Coords c = inf.getPosition();
+                    r = new Report(5305);
+                    r.addDesc(inf);
+                    r.add(c.getBoardNum());
+                    r.subject = inf.getId();
+                    gameManager.addReport(r);
+                    // fortification complete - add to map
+                    Hex hex = gameManager.game.getBoard().getHex(c);
+                    hex.addTerrain(new Terrain(Terrains.FORTIFIED, 1));
+                    gameManager.communicationManager.sendChangedHex(c, gameManager);
+                    // Clear the dig in for any units in same hex, since they
+                    // get it for free by fort
+                    for (Entity ent2 : gameManager.game.getEntitiesVector(c)) {
+                        if (ent2 instanceof Infantry) {
+                            Infantry inf2 = (Infantry) ent2;
+                            inf2.setDugIn(Infantry.DUG_IN_NONE);
+                        }
+                    }
+                }
+            }
+
+            if (ent instanceof Tank) {
+                Tank tnk = (Tank) ent;
+                int dig = tnk.getDugIn();
+                if (dig == Tank.DUG_IN_FORTIFYING3) {
+                    Coords c = tnk.getPosition();
+                    r = new Report(5305);
+                    r.addDesc(tnk);
+                    r.add(c.getBoardNum());
+                    r.subject = tnk.getId();
+                    gameManager.addReport(r);
+                    // Fort complete, now add it to the map
+                    Hex hex = gameManager.game.getBoard().getHex(c);
+                    hex.addTerrain(new Terrain(Terrains.FORTIFIED, 1));
+                    gameManager.communicationManager.sendChangedHex(c, gameManager);
+                    tnk.setDugIn(Tank.DUG_IN_NONE);
+                    // Clear the dig in for any units in same hex, since they
+                    // get it for free by fort
+                    for (Entity ent2 : gameManager.game.getEntitiesVector(c)) {
+                        if (ent2 instanceof Infantry) {
+                            Infantry inf2 = (Infantry) ent2;
+                            inf2.setDugIn(Infantry.DUG_IN_NONE);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if spikes get broken in the given location
+     *
+     * @param e   The {@link Entity} to check
+     * @param loc The location index
+     * @return    A report showing the results of the roll
+     */
+    protected Report checkBreakSpikes(Entity e, int loc) {
+        Roll diceRoll = Compute.rollD6(2);
+        Report r;
+
+        if (diceRoll.getIntValue() < 9) {
+            r = new Report(4445);
+            r.indent(2);
+            r.add(diceRoll);
+            r.subject = e.getId();
+        } else {
+            r = new Report(4440);
+            r.indent(2);
+            r.add(diceRoll);
+            r.subject = e.getId();
+
+            for (Mounted m : e.getMisc()) {
+                if (m.getType().hasFlag(MiscType.F_SPIKES)
+                        && (m.getLocation() == loc)) {
+                    m.setHit(true);
+                }
+            }
+        }
+        return r;
+    }
+
+    /**
+     * create a <code>SmokeCloud</code> object and add it to the server list
+     *  @param coords   the location to create the smoke
+     * @param level    1=Light 2=Heavy Smoke 3:light LI smoke 4: Heavy LI smoke
+     * @param duration How long the smoke will last.
+     * @param gameManager
+     */
+    public void createSmoke(Coords coords, int level, int duration, GameManager gameManager) {
+        SmokeCloud cloud = new SmokeCloud(coords, level, duration, gameManager.game.getRoundCount());
+        gameManager.game.addSmokeCloud(cloud);
+        gameManager.communicationManager.sendSmokeCloudAdded(cloud, gameManager);
+    }
+
+    /**
+     * create a <code>SmokeCloud</code> object and add it to the server list
+     *  @param coords   the location to create the smoke
+     * @param level    1=Light 2=Heavy Smoke 3:light LI smoke 4: Heavy LI smoke
+     * @param duration duration How long the smoke will last.
+     * @param gameManager
+     */
+    public void createSmoke(ArrayList<Coords> coords, int level, int duration, GameManager gameManager) {
+        SmokeCloud cloud = new SmokeCloud(coords, level, duration, gameManager.game.getRoundCount());
+        gameManager.game.addSmokeCloud(cloud);
+        gameManager.communicationManager.sendSmokeCloudAdded(cloud, gameManager);
+    }
+
+    /**
+     * Check to see if blowing sand caused damage to airborne VTOL/WIGEs
+     * @param gameManager
+     */
+    protected Vector<Report> resolveBlowingSandDamage(GameManager gameManager) {
+        Vector<Report> vFullReport = new Vector<>();
+        vFullReport.add(new Report(5002, Report.PUBLIC));
+        int damage_bonus = Math.max(0, gameManager.game.getPlanetaryConditions().getWindStrength()
+                - PlanetaryConditions.WI_MOD_GALE);
+        // cycle through each team and damage 1d6 airborne VTOL/WiGE
+        for (Team team : gameManager.game.getTeams()) {
+            Vector<Integer> airborne = gameManager.environmentalEffectManager.getAirborneVTOL(team, gameManager);
+            if (!airborne.isEmpty()) {
+                // how many units are affected
+                int unitsAffected = Math.min(Compute.d6(), airborne.size());
+                while ((unitsAffected > 0) && !airborne.isEmpty()) {
+                    int loc = Compute.randomInt(airborne.size());
+                    Entity en = gameManager.game.getEntity(airborne.get(loc));
+                    int damage = Math.max(1, Compute.d6() / 2) + damage_bonus;
+                    while (damage > 0) {
+                        HitData hit = en.rollHitLocation(ToHitData.HIT_NORMAL, ToHitData.SIDE_RANDOM);
+                        vFullReport.addAll(gameManager.damageEntity(en, hit, 1));
+                        damage--;
+                    }
+                    unitsAffected--;
+                    airborne.remove(loc);
+                }
+            }
+        }
+        Report.addNewline(gameManager.vPhaseReport);
+        return vFullReport;
+    }
+
+    /**
+     * cycle through entities on team and collect all the airborne VTOL/WIGE
+     *
+     * @return a vector of relevant entity ids
+     * @param team
+     * @param gameManager
+     */
+    public Vector<Integer> getAirborneVTOL(Team team, GameManager gameManager) {
+        Vector<Integer> units = new Vector<>();
+        for (Entity entity : gameManager.game.getEntitiesVector()) {
+            for (Player player : team.players()) {
+                if (entity.getOwner().equals(player)) {
+                    if (((entity instanceof VTOL)
+                            || (entity.getMovementMode() == EntityMovementMode.WIGE)) &&
+                            (!entity.isDestroyed()) &&
+                            (entity.getElevation() > 0)) {
+                        units.add(entity.getId());
+                    }
+                }
+            }
+        }
+        return units;
+    }
+
+    /**
+     * let an entity lay a mine
+     *  @param entity the <code>Entity</code> that should lay a mine
+     * @param mineId an <code>int</code> pointing to the mine
+     * @param coords
+     * @param gameManager
+     */
+    protected void layMine(Entity entity, int mineId, Coords coords, GameManager gameManager) {
+        Mounted mine = entity.getEquipment(mineId);
+        Report r;
+        if (!mine.isMissing()) {
+            int reportId = 0;
+            switch (mine.getMineType()) {
+                case Mounted.MINE_CONVENTIONAL:
+                    deliverThunderMinefield(coords, entity.getOwnerId(), 10,
+                            entity.getId(), gameManager);
+                    reportId = 3500;
+                    break;
+                case Mounted.MINE_VIBRABOMB:
+                    deliverThunderVibraMinefield(coords, entity.getOwnerId(), 10,
+                            mine.getVibraSetting(), entity.getId(), gameManager);
+                    reportId = 3505;
+                    break;
+                case Mounted.MINE_ACTIVE:
+                    deliverThunderActiveMinefield(coords, entity.getOwnerId(), 10,
+                            entity.getId(), gameManager);
+                    reportId = 3510;
+                    break;
+                case Mounted.MINE_INFERNO:
+                    deliverThunderInfernoMinefield(coords, entity.getOwnerId(), 10,
+                            entity.getId(), gameManager);
+                    reportId = 3515;
+                    break;
+                // TODO : command-detonated mines
+                // case 2:
+            }
+            mine.setShotsLeft(mine.getUsableShotsLeft() - 1);
+            if (mine.getUsableShotsLeft() <= 0) {
+                mine.setMissing(true);
+            }
+            r = new Report(reportId);
+            r.subject = entity.getId();
+            r.addDesc(entity);
+            r.add(coords.getBoardNum());
+            gameManager.addReport(r);
+            entity.setLayingMines(true);
         }
     }
 }

@@ -64,7 +64,7 @@ public class RapidfireHVACWeaponHandler extends RapidfireACWeaponHandler {
                 rearCoords = src;
             }
 
-            gameManager.createSmoke(rearCoords, SmokeCloud.SMOKE_HEAVY, 2);
+            gameManager.environmentalEffectManager.createSmoke(rearCoords, SmokeCloud.SMOKE_HEAVY, 2, gameManager);
         }
         return super.handle(phase, vPhaseReport);
     }

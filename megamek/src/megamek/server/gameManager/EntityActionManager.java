@@ -75,8 +75,8 @@ public class EntityActionManager {
             entity.setGrappled(Entity.NONE, false);
             te.setGrappled(Entity.NONE, false);
 
-            gameManager.entityUpdate(entity.getId());
-            gameManager.entityUpdate(te.getId());
+            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
+            gameManager.entityActionManager.entityUpdate(te.getId(), gameManager);
         }
 
         // check the LOS of any telemissiles owned by this entity
@@ -89,7 +89,7 @@ public class EntityActionManager {
                 } else {
                     ((TeleMissile) tm).setOutContact(true);
                 }
-                gameManager.entityUpdate(tm.getId());
+                gameManager.entityActionManager.entityUpdate(tm.getId(), gameManager);
             }
         }
 
@@ -100,7 +100,7 @@ public class EntityActionManager {
         gameManager.utilityManager.detectHiddenUnits(gameManager);
 
         // Update visibility indications if using double blind.
-        if (gameManager.doBlind()) {
+        if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
             gameManager.updateVisibilityIndicator(losCache);
         }
 
@@ -110,7 +110,7 @@ public class EntityActionManager {
                 && gameManager.game.getBoard().contains(md.getFinalCoords())
                 && (gameManager.game.getBoard().getHex(md.getFinalCoords()).terrainLevel(Terrains.SMOKE) == SmokeCloud.SMOKE_GREEN)
                 && entity.antiTSMVulnerable()) {
-            gameManager.reportManager.addReport(gameManager.doGreenSmokeDamage(entity), gameManager);
+            gameManager.reportManager.addReport(gameManager.environmentalEffectManager.doGreenSmokeDamage(entity, gameManager), gameManager);
         }
 
         // This entity's turn is over.
@@ -141,7 +141,7 @@ public class EntityActionManager {
                     r.subject = swarmedId;
                     r.addDesc(swarmed);
                     gameManager.addReport(r);
-                    gameManager.entityUpdate(swarmedId);
+                    gameManager.entityActionManager.entityUpdate(swarmedId, gameManager);
                 }
             }
 
@@ -162,7 +162,7 @@ public class EntityActionManager {
                 gameManager.getGame().removeTurnFor(entity);
                 gameManager.communicationManager.send(gameManager.packetManager.createTurnVectorPacket(gameManager));
             }
-            gameManager.entityUpdate(entity.getId());
+            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
             gameManager.game.removeEntity(entity.getId(), condition);
             gameManager.communicationManager.send(gameManager.packetManager.createRemoveEntityPacket(entity.getId(), condition, gameManager));
         }
@@ -208,7 +208,7 @@ public class EntityActionManager {
                     r.subject = swarmedId;
                     r.addDesc(swarmed);
                     gameManager.addReport(r);
-                    gameManager.entityUpdate(swarmedId);
+                    gameManager.entityActionManager.entityUpdate(swarmedId, gameManager);
                 }
             }
 
@@ -229,7 +229,7 @@ public class EntityActionManager {
                 condition = IEntityRemovalConditions.REMOVE_DEVASTATED;
             }
 
-            gameManager.entityUpdate(entity.getId());
+            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
             gameManager.game.removeEntity(entity.getId(), condition);
             gameManager.communicationManager.send(gameManager.packetManager.createRemoveEntityPacket(entity.getId(), condition, gameManager));
         }
@@ -411,7 +411,7 @@ public class EntityActionManager {
         gameManager.entityActionManager.processAttack(entity, vector, gameManager);
 
         // Update visibility indications if using double blind.
-        if (gameManager.doBlind()) {
+        if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
             gameManager.updateVisibilityIndicator(null);
         }
 
@@ -548,7 +548,7 @@ public class EntityActionManager {
                     }
                 }
                 if (firingAtNewHex) {
-                    gameManager.clearArtillerySpotters(firingEntity.getId(), aaa.getWeaponId());
+                    gameManager.environmentalEffectManager.clearArtillerySpotters(firingEntity.getId(), aaa.getWeaponId(), gameManager);
                 }
                 Iterator<Entity> spotters = gameManager.game.getSelectedEntities(new EntitySelector() {
                     public int player = firingEntity.getOwnerId();
@@ -613,7 +613,7 @@ public class EntityActionManager {
                 entity.setAltitude(entity.getAltitude() - aero.getAltLoss());
                 aero.setAltLossThisRound(aero.getAltLoss());
                 aero.resetAltLoss();
-                gameManager.entityUpdate(entity.getId());
+                gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
             }
         }
 
@@ -622,7 +622,7 @@ public class EntityActionManager {
         if (setDone) {
             entity.setDone(true);
         }
-        gameManager.entityUpdate(entity.getId());
+        gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
 
         Packet p = gameManager.packetManager.createAttackPacket(vector, 0);
         if (gameManager.getGame().getPhase().isSimultaneous(gameManager.getGame())) {
@@ -700,7 +700,7 @@ public class EntityActionManager {
         }
 
         // Update visibility indications if using double blind.
-        if (gameManager.doBlind()) {
+        if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
             gameManager.updateVisibilityIndicator(null);
         }
 
@@ -750,10 +750,10 @@ public class EntityActionManager {
         }
 
         // Unload and call entityUpdate
-        gameManager.unloadUnit(loader, loaded, null, 0, 0, false, true);
+        gameManager.entityActionManager.unloadUnit(loader, loaded, null, 0, 0, false, true, gameManager);
 
         // Need to update the loader
-        gameManager.entityUpdate(loader.getId());
+        gameManager.entityActionManager.entityUpdate(loader.getId(), gameManager);
 
         // Now need to add a turn for the unloaded unit, to be taken immediately
         // Turn forced to be immediate to avoid messy turn ordering issues
@@ -790,7 +790,7 @@ public class EntityActionManager {
                 break;
             }
             // Have the deployed unit load the indicated unit.
-            gameManager.loadUnit(entity, loaded, loaded.getTargetBay());
+            gameManager.entityActionManager.loadUnit(entity, loaded, loaded.getTargetBay(), gameManager);
         }
 
         /*
@@ -902,7 +902,7 @@ public class EntityActionManager {
                 buildings.add(bldg);
                 gameManager.communicationManager.sendChangedBuildings(buildings, gameManager);
             }
-            boolean collapse = gameManager.checkBuildingCollapseWhileMoving(bldg, entity, entity.getPosition());
+            boolean collapse = gameManager.environmentalEffectManager.checkBuildingCollapseWhileMoving(bldg, entity, entity.getPosition(), gameManager);
             if (collapse) {
                 gameManager.environmentalEffectManager.addAffectedBldg(bldg, true, gameManager);
                 if (wigeFlyover) {
@@ -914,7 +914,7 @@ public class EntityActionManager {
 
         entity.setDone(true);
         entity.setDeployed(true);
-        gameManager.entityUpdate(entity.getId());
+        gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
         gameManager.reportManager.addReport(gameManager.utilityManager.doSetLocationsExposure(entity, hex, false, entity.getElevation(), gameManager), gameManager);
     }
 
@@ -958,7 +958,7 @@ public class EntityActionManager {
                 gameManager.addReport(r);
                 Aero ship = (Aero) entity;
                 ship.setEjecting(true);
-                gameManager.entityUpdate(ship.getId());
+                gameManager.entityActionManager.entityUpdate(ship.getId(), gameManager);
                 Coords legalPos = entity.getPosition();
                 //Get the step so we can pass it in and get the abandon coords from it
                 for (final Enumeration<MoveStep> i = md.getSteps(); i
@@ -1011,7 +1011,7 @@ public class EntityActionManager {
             gameManager.checkForTakeoffDamage(a);
             entity.setPosition(entity.getPosition().translated(entity.getFacing(), a.getTakeOffLength()));
             entity.setDone(true);
-            gameManager.entityUpdate(entity.getId());
+            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
             return;
         }
 
@@ -1027,7 +1027,7 @@ public class EntityActionManager {
                 gameManager.checkForTakeoffDamage(a);
             }
             entity.setDone(true);
-            gameManager.entityUpdate(entity.getId());
+            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
             return;
         }
 
@@ -1035,14 +1035,14 @@ public class EntityActionManager {
             IAero a = (IAero) entity;
             rollTarget = a.checkLanding(md.getLastStepMovementType(), md.getFinalVelocity(),
                     md.getFinalCoords(), md.getFinalFacing(), false);
-            gameManager.attemptLanding(entity, rollTarget);
+            gameManager.entityActionManager.attemptLanding(entity, rollTarget, gameManager);
             gameManager.environmentalEffectManager.checkLandingTerrainEffects(a, true, md.getFinalCoords(),
                     md.getFinalCoords().translated(md.getFinalFacing(), a.getLandingLength()), md.getFinalFacing(), gameManager);
             a.land();
             entity.setPosition(md.getFinalCoords().translated(md.getFinalFacing(),
                     a.getLandingLength()));
             entity.setDone(true);
-            gameManager.entityUpdate(entity.getId());
+            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
             return;
         }
 
@@ -1051,7 +1051,7 @@ public class EntityActionManager {
             rollTarget = a.checkLanding(md.getLastStepMovementType(),
                     md.getFinalVelocity(), md.getFinalCoords(),
                     md.getFinalFacing(), true);
-            gameManager.attemptLanding(entity, rollTarget);
+            gameManager.entityActionManager.attemptLanding(entity, rollTarget, gameManager);
             if (entity instanceof Dropship) {
                 gameManager.environmentalEffectManager.applyDropShipLandingDamage(md.getFinalCoords(), (Dropship) a, gameManager);
             }
@@ -1059,7 +1059,7 @@ public class EntityActionManager {
             a.land();
             entity.setPosition(md.getFinalCoords());
             entity.setDone(true);
-            gameManager.entityUpdate(entity.getId());
+            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
             return;
         }
 
@@ -1129,7 +1129,7 @@ public class EntityActionManager {
         if ((gameManager.game.getBoard().getHex(entity.getPosition())
                 .terrainLevel(Terrains.MAGMA) == 2)
                 && (entity.getElevation() == 0)) {
-            gameManager.doMagmaDamage(entity, false);
+            gameManager.environmentalEffectManager.doMagmaDamage(entity, false, gameManager);
         }
 
         // set acceleration used to default
@@ -1165,7 +1165,7 @@ public class EntityActionManager {
                 gameManager.addReport(r);
             }
             entity.setDone(true);
-            gameManager.entityUpdate(entity.getId());
+            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
             return;
         }
 
@@ -1207,14 +1207,14 @@ public class EntityActionManager {
                             step.getPosition(), entity.climbMode()) != null)) {
                         // Moving into hex of a hidden unit detects the unit
                         e.setHidden(false);
-                        gameManager.entityUpdate(e.getId());
+                        gameManager.entityActionManager.entityUpdate(e.getId(), gameManager);
                         r = new Report(9960);
                         r.addDesc(entity);
                         r.subject = entity.getId();
                         r.add(e.getPosition().getBoardNum());
                         gameManager.vPhaseReport.addElement(r);
                         // Report the block
-                        if (gameManager.doBlind()) {
+                        if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
                             r = new Report(9961);
                             r.subject = e.getId();
                             r.addDesc(e);
@@ -1236,7 +1236,7 @@ public class EntityActionManager {
                             gameManager.communicationManager.send(entity.getOwner().getId(), gameManager.packetManager.createSpecialReportPacket(gameManager));
                         }
                         entity.setDone(true);
-                        gameManager.entityUpdate(entity.getId(), movePath, true, losCache);
+                        gameManager.entityActionManager.entityUpdate(entity.getId(), movePath, true, losCache, gameManager);
                         return;
                         // Potential point-blank shot
                     } else if ((dist == 1) && !e.madePointblankShot()) {
@@ -1251,7 +1251,7 @@ public class EntityActionManager {
                         if (tookPBS) {
                             // Attacking reveals hidden unit
                             e.setHidden(false);
-                            gameManager.entityUpdate(e.getId());
+                            gameManager.entityActionManager.entityUpdate(e.getId(), gameManager);
                             r = new Report(9960);
                             r.addDesc(entity);
                             r.subject = entity.getId();
@@ -1846,7 +1846,7 @@ public class EntityActionManager {
             }
 
             if (step.getType() == MovePath.MoveStepType.LAY_MINE) {
-                gameManager.layMine(entity, step.getMineToLay(), step.getPosition());
+                gameManager.environmentalEffectManager.layMine(entity, step.getMineToLay(), step.getPosition(), gameManager);
                 continue;
             }
 
@@ -1861,7 +1861,7 @@ public class EntityActionManager {
                     && entity.hasSearchlight()) {
                 final boolean SearchOn = !entity.isUsingSearchlight();
                 entity.setSearchlightState(SearchOn);
-                if (gameManager.doBlind()) { // if double blind, we may need to filter the
+                if (gameManager.environmentalEffectManager.doBlind(gameManager)) { // if double blind, we may need to filter the
                     // players that receive this message
                     Vector<Player> playersVector = gameManager.game.getPlayersVector();
                     Vector<Player> vCanSee = gameManager.whoCanSee(entity);
@@ -2470,7 +2470,7 @@ public class EntityActionManager {
                         .collect(Collectors.toList());
                 if (chaffDispensers.size() > 0) {
                     chaffDispensers.get(0).setFired(true);
-                    gameManager.createSmoke(curPos, SmokeCloud.SMOKE_CHAFF_LIGHT, 1);
+                    gameManager.environmentalEffectManager.createSmoke(curPos, SmokeCloud.SMOKE_CHAFF_LIGHT, 1, gameManager);
                     Hex hex = gameManager.game.getBoard().getHex(curPos);
                     hex.addTerrain(new Terrain(Terrains.SMOKE, SmokeCloud.SMOKE_CHAFF_LIGHT));
                     gameManager.communicationManager.sendChangedHex(curPos, gameManager);
@@ -2489,7 +2489,7 @@ public class EntityActionManager {
                 r.addDesc(entity);
                 r.subject = entity.getId();
                 gameManager.addReport(r);
-                gameManager.doMagmaDamage(entity, false);
+                gameManager.environmentalEffectManager.doMagmaDamage(entity, false, gameManager);
             }
 
             // check if we've moved into a swamp
@@ -2519,7 +2519,7 @@ public class EntityActionManager {
                                 new PilotingRollData(violation.getId(), 0,
                                         "domino effect"), gameManager), gameManager);
                         // Update the violating entity's position on the client.
-                        gameManager.entityUpdate(violation.getId());
+                        gameManager.entityActionManager.entityUpdate(violation.getId(), gameManager);
                     }
                     break;
                 }
@@ -2581,7 +2581,7 @@ public class EntityActionManager {
 
             if ((gameManager.game.getBoard().getHex(curPos).terrainLevel(Terrains.SMOKE) == SmokeCloud.SMOKE_GREEN)
                     && !stepMoveType.equals(EntityMovementType.MOVE_JUMP) && entity.antiTSMVulnerable()) {
-                gameManager.reportManager.addReport(gameManager.doGreenSmokeDamage(entity), gameManager);
+                gameManager.reportManager.addReport(gameManager.environmentalEffectManager.doGreenSmokeDamage(entity, gameManager), gameManager);
             }
 
             // check for extreme gravity movement
@@ -2728,7 +2728,7 @@ public class EntityActionManager {
                 r = new Report(2410);
                 r.addDesc(entity);
                 gameManager.addReport(r);
-                gameManager.reportManager.addReport(gameManager.resolveIceBroken(lastPos), gameManager);
+                gameManager.reportManager.addReport(gameManager.entityActionManager.resolveIceBroken(lastPos, gameManager), gameManager);
                 // ok now set back
                 entity.setPosition(lastPos);
             }
@@ -2748,7 +2748,7 @@ public class EntityActionManager {
 
                     if (diceRoll.getIntValue() == 6) {
                         entity.setPosition(curPos);
-                        gameManager.reportManager.addReport(gameManager.resolveIceBroken(curPos), gameManager);
+                        gameManager.reportManager.addReport(gameManager.entityActionManager.resolveIceBroken(curPos, gameManager), gameManager);
                         curPos = entity.getPosition();
                     }
                 }
@@ -2757,7 +2757,7 @@ public class EntityActionManager {
                     r = new Report(2410);
                     r.addDesc(entity);
                     gameManager.addReport(r);
-                    gameManager.reportManager.addReport(gameManager.resolveIceBroken(curPos), gameManager);
+                    gameManager.reportManager.addReport(gameManager.entityActionManager.resolveIceBroken(curPos, gameManager), gameManager);
                 }
             }
 
@@ -2801,7 +2801,7 @@ public class EntityActionManager {
                             loaded = null;
                         } else {
                             // Have the deployed unit load the indicated unit.
-                            gameManager.loadUnit(entity, loaded, loaded.getTargetBay());
+                            gameManager.entityActionManager.loadUnit(entity, loaded, loaded.getTargetBay(), gameManager);
 
                             // Stop looking.
                             break;
@@ -2844,7 +2844,7 @@ public class EntityActionManager {
                     LogManager.getLogger().error(entity.getShortName() + " can not tow " + loaded.getShortName());
                 } else {
                     // Have the deployed unit load the indicated unit.
-                    gameManager.towUnit(entity, loaded);
+                    gameManager.entityActionManager.towUnit(entity, loaded, gameManager);
                 }
             } // End STEP_TOW
 
@@ -2859,7 +2859,7 @@ public class EntityActionManager {
                     } else {
                         // Have the indicated unit load this unit.
                         entity.setDone(true);
-                        gameManager.loadUnit(dropShip, entity, entity.getTargetBay());
+                        gameManager.entityActionManager.loadUnit(dropShip, entity, entity.getTargetBay(), gameManager);
                         Bay currentBay = dropShip.getBay(entity);
                         if ((null != currentBay) && (Compute.d6(2) == 2)) {
                             r = new Report(9390);
@@ -2870,7 +2870,7 @@ public class EntityActionManager {
                             currentBay.destroyDoorNext();
                         }
                         // Stop looking.
-                        gameManager.entityUpdate(dropShip.getId());
+                        gameManager.entityActionManager.entityUpdate(dropShip.getId(), gameManager);
                         return;
                     }
                 }
@@ -2945,8 +2945,8 @@ public class EntityActionManager {
                     unloadPos = step.getTargetPosition();
                     unloadFacing = curPos.direction(unloadPos);
                 }
-                if (!gameManager.unloadUnit(entity, unloaded, unloadPos, unloadFacing,
-                        step.getElevation())) {
+                if (!gameManager.entityActionManager.unloadUnit(entity, unloaded, unloadPos, unloadFacing,
+                        step.getElevation(), gameManager)) {
                     LogManager.getLogger().error("Server was told to unload "
                             + unloaded.getDisplayName() + " from "
                             + entity.getDisplayName() + " into "
@@ -2966,7 +2966,7 @@ public class EntityActionManager {
                     }
                     // now apply any damage to bay doors
                     entity.resetBayDoors();
-                    gameManager.entityUpdate(entity.getId());
+                    gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
                     // ok now add another turn for the transport so it can
                     // continue to unload units
                     if (!entity.getUnitsUnloadableFromBays().isEmpty()) {
@@ -2998,7 +2998,7 @@ public class EntityActionManager {
                 if (null != step.getTargetPosition()) {
                     unloadPos = step.getTargetPosition();
                 }
-                if (!gameManager.disconnectUnit(entity, unloaded, unloadPos)) {
+                if (!gameManager.entityActionManager.disconnectUnit(entity, unloaded, unloadPos, gameManager)) {
                     LogManager.getLogger().error(String.format(
                             "Server was told to disconnect %s from %s into %s",
                             unloaded.getDisplayName(), entity.getDisplayName(), curPos.getBoardNum()));
@@ -3062,7 +3062,7 @@ public class EntityActionManager {
                 // ProtoMechs changing levels within a building cause damage
                 if (((buildingMove & 8) == 8) && (entity instanceof Protomech)) {
                     Building bldg = gameManager.game.getBoard().getBuildingAt(curPos);
-                    Vector<Report> vBuildingReport = gameManager.damageBuilding(bldg, 1, curPos);
+                    Vector<Report> vBuildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, 1, curPos, gameManager);
                     for (Report report : vBuildingReport) {
                         report.subject = entity.getId();
                     }
@@ -3084,8 +3084,8 @@ public class EntityActionManager {
                         reason = "entering";
                     }
 
-                    gameManager.passBuildingWall(entity, bldgEntered, lastPos, curPos, distance, reason,
-                            step.isThisStepBackwards(), lastStepMoveType, true);
+                    gameManager.environmentalEffectManager.passBuildingWall(entity, bldgEntered, lastPos, curPos, distance, reason,
+                            step.isThisStepBackwards(), lastStepMoveType, true, gameManager);
                     gameManager.environmentalEffectManager.addAffectedBldg(bldgEntered, collapsed, gameManager);
                 }
 
@@ -3114,7 +3114,7 @@ public class EntityActionManager {
                             && curElevation > curHex.terrainLevel(Terrains.BLDG_ELEV)) ||
                             (curHex.containsTerrain(Terrains.BRIDGE_ELEV)
                                     && curElevation > curHex.terrainLevel(Terrains.BRIDGE_ELEV)));
-                    boolean collapse = gameManager.checkBuildingCollapseWhileMoving(bldg, entity, curPos);
+                    boolean collapse = gameManager.environmentalEffectManager.checkBuildingCollapseWhileMoving(bldg, entity, curPos, gameManager);
                     gameManager.environmentalEffectManager.addAffectedBldg(bldg, collapse, gameManager);
                     // If the building is collapsed by a WiGE flying over it, the WiGE drops one level of elevation.
                     // This could invalidate the remainder of the movement path, so we will send it back to the client.
@@ -3252,7 +3252,7 @@ public class EntityActionManager {
 
                 final int cf = bldg.getCurrentCF(pos);
                 final int numFloors = Math.max(0, hex.terrainLevel(Terrains.BLDG_ELEV));
-                gameManager.vPhaseReport.addAll(gameManager.damageBuilding(bldg, 150, " is crushed for ", pos));
+                gameManager.vPhaseReport.addAll(gameManager.environmentalEffectManager.damageBuilding(bldg, 150, " is crushed for ", pos, gameManager));
                 int damage = (int) Math.round((cf / 10.0) * numFloors);
                 HitData hit = entity.rollHitLocation(ToHitData.HIT_NORMAL, ToHitData.SIDE_FRONT);
                 gameManager.vPhaseReport.addAll(gameManager.damageEntity(entity, hit, damage));
@@ -3567,7 +3567,7 @@ public class EntityActionManager {
                     gameManager.addNewLines();
                     swarmer.setPosition(curPos);
                 }
-                gameManager.entityUpdate(swarmerId);
+                gameManager.entityActionManager.entityUpdate(swarmerId, gameManager);
             } // End successful-PSR
 
         } // End try-to-dislodge-swarmers
@@ -3619,7 +3619,7 @@ public class EntityActionManager {
                     if (diceRoll.getIntValue() >= 4) {
                         // oops!
                         entity.setPosition(curPos);
-                        gameManager.reportManager.addReport(gameManager.resolveIceBroken(curPos), gameManager);
+                        gameManager.reportManager.addReport(gameManager.entityActionManager.resolveIceBroken(curPos, gameManager), gameManager);
                         curPos = entity.getPosition();
                     } else {
                         // TacOps: immediate PSR with +4 for terrain. If you
@@ -3638,7 +3638,7 @@ public class EntityActionManager {
 
                             if (diceRoll2.getIntValue() == 6) {
                                 entity.setPosition(curPos);
-                                gameManager.reportManager.addReport(gameManager.resolveIceBroken(curPos), gameManager);
+                                gameManager.reportManager.addReport(gameManager.entityActionManager.resolveIceBroken(curPos, gameManager), gameManager);
                                 curPos = entity.getPosition();
                             }
                         }
@@ -3678,8 +3678,8 @@ public class EntityActionManager {
             // check for building collapse
             Building bldg = gameManager.game.getBoard().getBuildingAt(curPos);
             if (bldg != null) {
-                gameManager.checkForCollapse(bldg, gameManager.game.getPositionMap(), curPos, true,
-                        gameManager.vPhaseReport);
+                gameManager.environmentalEffectManager.checkForCollapse(bldg, gameManager.game.getPositionMap(), curPos, true,
+                        gameManager.vPhaseReport, gameManager);
             }
 
             // Don't interact with terrain when jumping onto a building or a bridge
@@ -3788,7 +3788,7 @@ public class EntityActionManager {
                         gameManager.addNewLines();
                         swarmer.setPosition(curPos);
                     }
-                    gameManager.entityUpdate(swarmerId);
+                    gameManager.entityActionManager.entityUpdate(swarmerId, gameManager);
                 } // End successful-PSR
 
             } // End try-to-dislodge-swarmers
@@ -3808,8 +3808,8 @@ public class EntityActionManager {
                 r.subject = entity.getId();
                 r.addDesc(entity);
                 gameManager.vPhaseReport.add(r);
-                gameManager.vPhaseReport.addAll(gameManager.vehicleMotiveDamage((Tank) entity, modifier,
-                        false, -1, true));
+                gameManager.vPhaseReport.addAll(gameManager.entityActionManager.vehicleMotiveDamage((Tank) entity, modifier,
+                        false, -1, true, gameManager));
                 Report.addNewline(gameManager.vPhaseReport);
             }
 
@@ -3925,8 +3925,8 @@ public class EntityActionManager {
                     if (hex.containsTerrain(Terrains.BLDG_ELEV)) {
                         Building bldg = gameManager.game.getBoard().getBuildingAt(entity.getPosition());
                         entity.setElevation(hex.terrainLevel(Terrains.BLDG_ELEV));
-                        gameManager.environmentalEffectManager.addAffectedBldg(bldg, gameManager.checkBuildingCollapseWhileMoving(bldg,
-                                entity, entity.getPosition()), gameManager);
+                        gameManager.environmentalEffectManager.addAffectedBldg(bldg, gameManager.environmentalEffectManager.checkBuildingCollapseWhileMoving(bldg,
+                                entity, entity.getPosition(), gameManager), gameManager);
                     } else if (entity.isLocationProhibited(entity.getPosition(), 0)
                             && !hex.hasPavement()) {
                         // crash
@@ -3956,7 +3956,7 @@ public class EntityActionManager {
                                     entity.getPosition(), targetDest, prd, gameManager));
                             // Update the violating entity's position on the
                             // client.
-                            gameManager.entityUpdate(violation.getId());
+                            gameManager.entityActionManager.entityUpdate(violation.getId(), gameManager);
                         } else {
                             // ack! automatic death! Tanks
                             // suffer an ammo/power plant hit.
@@ -4024,13 +4024,13 @@ public class EntityActionManager {
                 r.add(swarmer.getShortName(), true);
                 gameManager.addReport(r);
             }
-            gameManager.entityUpdate(swarmerId);
+            gameManager.entityActionManager.entityUpdate(swarmerId, gameManager);
         }
 
         // Update the entity's position,
         // unless it is off the game map.
         if (!gameManager.game.isOutOfGame(entity)) {
-            gameManager.entityUpdate(entity.getId(), movePath, true, losCache);
+            gameManager.entityActionManager.entityUpdate(entity.getId(), movePath, true, losCache, gameManager);
             if (entity.isDoomed()) {
                 gameManager.communicationManager.send(gameManager.packetManager.createRemoveEntityPacket(entity.getId(),
                         entity.getRemovalCondition(), gameManager));
@@ -4067,9 +4067,9 @@ public class EntityActionManager {
                     fs.setDone(true);
                     // place on board
                     fs.setPosition(loader.getPosition());
-                    gameManager.loadUnit(fs, loader, -1);
+                    gameManager.entityActionManager.loadUnit(fs, loader, -1, gameManager);
                     loader = fs;
-                    gameManager.entityUpdate(fs.getId());
+                    gameManager.entityActionManager.entityUpdate(fs.getId(), gameManager);
                 }
                 loader.load(entity);
             } else {
@@ -4084,16 +4084,16 @@ public class EntityActionManager {
             entity.setPosition(null);
 
             // Update the loaded unit.
-            gameManager.entityUpdate(entity.getId());
+            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
         }
 
         // even if load was unsuccessful, I may need to update the loader
         if (null != loader) {
-            gameManager.entityUpdate(loader.getId());
+            gameManager.entityActionManager.entityUpdate(loader.getId(), gameManager);
         }
 
         // if using double blind, update the player on new units he might see
-        if (gameManager.doBlind()) {
+        if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
             gameManager.communicationManager.send(entity.getOwner().getId(), gameManager.packetManager.createFilteredFullEntitiesPacket(entity.getOwner(), losCache, gameManager));
         }
 
@@ -4139,7 +4139,7 @@ public class EntityActionManager {
                 trailer.moved = tractor.moved;
                 trailer.setSecondaryFacing(trailer.getFacing());
                 trailer.setDone(true);
-                gameManager.entityUpdate(eId);
+                gameManager.entityActionManager.entityUpdate(eId, gameManager);
                 continue;
             }
             int stepNumber; // The Coords in trainPath that this trailer should move to
@@ -4189,7 +4189,7 @@ public class EntityActionManager {
             trailer.moved = tractor.moved;
             trailer.setSecondaryFacing(trailer.getFacing());
             trailer.setDone(true);
-            gameManager.entityUpdate(eId);
+            gameManager.entityActionManager.entityUpdate(eId, gameManager);
         }
     }
 
@@ -4319,7 +4319,7 @@ public class EntityActionManager {
                                     PacketCommand.CFR_HIDDEN_PBS, Entity.NONE, Entity.NONE));
                         }
                         // Update all clients with the position of the PBS
-                        gameManager.entityUpdate(target.getId());
+                        gameManager.entityActionManager.entityUpdate(target.getId(), gameManager);
                         continue;
                     }
                 }
@@ -4974,7 +4974,7 @@ public class EntityActionManager {
                     // Update the target's position,
                     // unless it is off the game map.
                     if (!gameManager.game.isOutOfGame(target)) {
-                        gameManager.entityUpdate(target.getId());
+                        gameManager.entityActionManager.entityUpdate(target.getId(), gameManager);
                     }
                 } // Check the next entity in the hex.
 
@@ -5012,7 +5012,7 @@ public class EntityActionManager {
                                 .getOptions().booleanOption(OptionsConstants.ADVCOMBAT_TACOPS_CHARGE_DAMAGE),
                         entity.delta_distance);
                 if (!bldgSuffered) {
-                    Vector<Report> reports = gameManager.damageBuilding(bldg, chargeDamage, nextPos);
+                    Vector<Report> reports = gameManager.environmentalEffectManager.damageBuilding(bldg, chargeDamage, nextPos, gameManager);
                     for (Report report : reports) {
                         report.subject = entity.getId();
                     }
@@ -5036,7 +5036,7 @@ public class EntityActionManager {
                 // ASSUMPTION: infantry take no damage from the
                 // building absorbing damage from
                 // Tanks and Mechs being charged.
-                gameManager.reportManager.addReport(gameManager.damageInfantryIn(bldg, chargeDamage, nextPos), gameManager);
+                gameManager.reportManager.addReport(gameManager.environmentalEffectManager.damageInfantryIn(bldg, chargeDamage, nextPos, gameManager), gameManager);
 
                 // If a building still stands, then end the skid,
                 // and add it to the list of affected buildings.
@@ -5048,10 +5048,10 @@ public class EntityActionManager {
                         buildings.add(bldg);
                         gameManager.communicationManager.sendChangedBuildings(buildings, gameManager);
                     }
-                    gameManager.environmentalEffectManager.addAffectedBldg(bldg, gameManager.checkBuildingCollapseWhileMoving(bldg, entity, nextPos), gameManager);
+                    gameManager.environmentalEffectManager.addAffectedBldg(bldg, gameManager.environmentalEffectManager.checkBuildingCollapseWhileMoving(bldg, entity, nextPos, gameManager), gameManager);
                 } else {
                     // otherwise it collapses immediately on our head
-                    gameManager.checkForCollapse(bldg, gameManager.game.getPositionMap(), nextPos, true, gameManager.vPhaseReport);
+                    gameManager.environmentalEffectManager.checkForCollapse(bldg, gameManager.game.getPositionMap(), nextPos, true, gameManager.vPhaseReport, gameManager);
                 }
             } // End handle-building.
 
@@ -5069,7 +5069,7 @@ public class EntityActionManager {
             // Check for collapse of any building the entity might be on
             Building roof = gameManager.game.getBoard().getBuildingAt(nextPos);
             if (roof != null) {
-                if (gameManager.checkForCollapse(roof, gameManager.game.getPositionMap(), nextPos, true, gameManager.vPhaseReport)) {
+                if (gameManager.environmentalEffectManager.checkForCollapse(roof, gameManager.game.getPositionMap(), nextPos, true, gameManager.vPhaseReport, gameManager)) {
                     break; // stop skidding if the building collapsed
                 }
             }
@@ -5149,7 +5149,7 @@ public class EntityActionManager {
                     gameManager.reportManager.addReport(gameManager.utilityManager.doEntityDisplacement(violation, curPos, targetDest,
                             new PilotingRollData(violation.getId(), 0, "domino effect"), gameManager), gameManager);
                     // Update the violating entity's position on the client.
-                    gameManager.entityUpdate(violation.getId());
+                    gameManager.entityActionManager.entityUpdate(violation.getId(), gameManager);
                 }
                 // stay here and stop skidding, see bug 1115608
                 break;
@@ -5551,7 +5551,7 @@ public class EntityActionManager {
         // Update the target's position,
         // unless it is off the game map.
         if (!gameManager.game.isOutOfGame(target)) {
-            gameManager.entityUpdate(target.getId());
+            gameManager.entityActionManager.entityUpdate(target.getId(), gameManager);
         }
 
         return true;
@@ -5654,7 +5654,7 @@ public class EntityActionManager {
                 crash_damage *= 2;
             }
             if (null != bldg) {
-                gameManager.collapseBuilding(bldg, gameManager.game.getPositionMap(), hitCoords, true, vReport);
+                gameManager.environmentalEffectManager.collapseBuilding(bldg, gameManager.game.getPositionMap(), hitCoords, true, vReport, gameManager);
             }
             if (!damageDealt) {
                 r = new Report(9700, Report.PUBLIC);
@@ -5931,7 +5931,7 @@ public class EntityActionManager {
                 default:
                     entity.setStartingPos(Board.START_EDGE);
             }
-            gameManager.entityUpdate(entity.getId());
+            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
             return vReport;
         } else {
             ServerHelper.clearBloodStalkers(gameManager.game, entity.getId(), gameManager);
@@ -6120,7 +6120,7 @@ public class EntityActionManager {
                 mw.setDestroyed(true);
                 // We can safely remove these, as they can't be targeted
                 gameManager.game.removeEntity(mw.getId(), condition);
-                gameManager.entityUpdate(mw.getId());
+                gameManager.entityActionManager.entityUpdate(mw.getId(), gameManager);
                 gameManager.communicationManager.send(gameManager.packetManager.createRemoveEntityPacket(mw.getId(), condition, gameManager));
                 r = new Report(6370);
                 r.subject = mw.getId();
@@ -6134,7 +6134,7 @@ public class EntityActionManager {
                 Entity tm = gameManager.game.getEntity(missileId);
                 if ((null != tm) && !tm.isDestroyed() && (tm instanceof TeleMissile)) {
                     ((TeleMissile) tm).setOutContact(true);
-                    gameManager.entityUpdate(tm.getId());
+                    gameManager.entityActionManager.entityUpdate(tm.getId(), gameManager);
                 }
             }
 
@@ -6208,8 +6208,8 @@ public class EntityActionManager {
                         vDesc.addElement(r);
                     } else {
                         // The other unit survives.
-                        gameManager.unloadUnit(entity, other, curPos, curFacing, entity.getElevation(),
-                                true, false);
+                        gameManager.entityActionManager.unloadUnit(entity, other, curPos, curFacing, entity.getElevation(),
+                                true, false, gameManager);
                     }
                 }
             }
@@ -6220,9 +6220,9 @@ public class EntityActionManager {
                 Coords curPos = transport.getPosition();
                 int curFacing = transport.getFacing();
                 if (!transport.isLargeCraft()) {
-                    gameManager.unloadUnit(transport, entity, curPos, curFacing, transport.getElevation());
+                    gameManager.entityActionManager.unloadUnit(transport, entity, curPos, curFacing, transport.getElevation(), gameManager);
                 }
-                gameManager.entityUpdate(transport.getId());
+                gameManager.entityActionManager.entityUpdate(transport.getId(), gameManager);
 
                 // if this is the last fighter in a fighter squadron then remove the squadron
                 if ((transport instanceof FighterSquadron) && transport.getSubEntities().isEmpty()) {
@@ -6242,13 +6242,13 @@ public class EntityActionManager {
                 //Find the first trailer in the list and drop it
                 //this will disconnect all that follow too
                 Entity leadTrailer = gameManager.game.getEntity(entity.getAllTowedUnits().get(0));
-                gameManager.disconnectUnit(entity, leadTrailer, entity.getPosition());
+                gameManager.entityActionManager.disconnectUnit(entity, leadTrailer, entity.getPosition(), gameManager);
             }
 
             // Is this unit a trailer being towed? If so, disconnect it from its tractor
             if (entity.getTractor() != Entity.NONE) {
                 Entity tractor = gameManager.game.getEntity(entity.getTractor());
-                gameManager.disconnectUnit(tractor, entity, tractor.getPosition());
+                gameManager.entityActionManager.disconnectUnit(tractor, entity, tractor.getPosition(), gameManager);
             }
 
             // Is this unit being swarmed?
@@ -6270,7 +6270,7 @@ public class EntityActionManager {
                 vDesc.addElement(r);
                 // Swarming infantry shouldn't take damage when their target dies
                 // http://bg.battletech.com/forums/total-warfare/swarming-question
-                gameManager.entityUpdate(swarmerId);
+                gameManager.entityActionManager.entityUpdate(swarmerId, gameManager);
             }
 
             // Is this unit swarming somebody?
@@ -6283,7 +6283,7 @@ public class EntityActionManager {
                 r.subject = swarmed.getId();
                 r.addDesc(swarmed);
                 vDesc.addElement(r);
-                gameManager.entityUpdate(swarmedId);
+                gameManager.entityActionManager.entityUpdate(swarmedId, gameManager);
             }
 
             // If in a grapple, release both mechs
@@ -6294,7 +6294,7 @@ public class EntityActionManager {
                 if (e != null) {
                     e.setGrappled(Entity.NONE, false);
                 }
-                gameManager.entityUpdate(grappler);
+                gameManager.entityActionManager.entityUpdate(grappler, gameManager);
             }
 
             ServerHelper.clearBloodStalkers(gameManager.game, entity.getId(), gameManager);
@@ -6320,7 +6320,7 @@ public class EntityActionManager {
         }
 
         // update our entity, so clients have correct data needed for MekWars stuff
-        gameManager.entityUpdate(entity.getId());
+        gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
 
         return vDesc;
     }
@@ -6844,7 +6844,7 @@ public class EntityActionManager {
                     r.subject = en.getId();
                     vDesc.add(r);
                     if (diceRoll.getIntValue() > 3) {
-                        vDesc.addAll(gameManager.resolveIceBroken(crashPos));
+                        vDesc.addAll(gameManager.entityActionManager.resolveIceBroken(crashPos, gameManager));
                     } else {
                         waterFall = false; // saved by ice
                     }
@@ -6987,6 +6987,1237 @@ public class EntityActionManager {
             vDesc.addAll(destroyEntity(en, "crashed and burned", false, false, gameManager));
         }
 
+        return vDesc;
+    }
+
+    /**
+     * Have the loader load the indicated unit. The unit being loaded loses its
+     * turn.
+     *  @param loader - the <code>Entity</code> that is loading the unit.
+     * @param unit   - the <code>Entity</code> being loaded.
+     * @param bayNumber
+     * @param gameManager
+     */
+    protected void loadUnit(Entity loader, Entity unit, int bayNumber, GameManager gameManager) {
+        // ProtoMechs share a single turn for a Point. When loading one we don't remove its turn
+        // unless it's the last unit in the Point to act.
+        int remainingProtos = 0;
+        if (unit.hasETypeFlag(Entity.ETYPE_PROTOMECH)) {
+            remainingProtos = gameManager.game.getSelectedEntityCount(en -> en.hasETypeFlag(Entity.ETYPE_PROTOMECH)
+                    && en.getId() != unit.getId()
+                    && en.isSelectableThisTurn()
+                    && en.getOwnerId() == unit.getOwnerId()
+                    && en.getUnitNumber() == unit.getUnitNumber());
+        }
+
+        if (!gameManager.getGame().getPhase().isLounge() && !unit.isDone() && (remainingProtos == 0)) {
+            // Remove the *last* friendly turn (removing the *first* penalizes
+            // the opponent too much, and re-calculating moves is too hard).
+            gameManager.game.removeTurnFor(unit);
+            gameManager.communicationManager.send(gameManager.packetManager.createTurnVectorPacket(gameManager));
+        }
+
+        // Fighter Squadrons may become too big for the bay they're parked in
+        if ((loader instanceof FighterSquadron) && (loader.getTransportId() != Entity.NONE)) {
+            Entity carrier = gameManager.game.getEntity(loader.getTransportId());
+            Transporter bay = carrier.getBay(loader);
+
+            if (bay.getUnused() < 1) {
+                if (gameManager.getGame().getPhase().isLounge()) {
+                    // In the lobby, unload the squadron if too big
+                    loader.setTransportId(Entity.NONE);
+                    carrier.unload(loader);
+                    gameManager.entityActionManager.entityUpdate(carrier.getId(), gameManager);
+                } else {
+                    // Outside the lobby, reject the load
+                    gameManager.entityActionManager.entityUpdate(unit.getId(), gameManager);
+                    gameManager.entityActionManager.entityUpdate(loader.getId(), gameManager);
+                    return;
+                }
+            }
+        }
+
+        // When loading an Aero into a squadron in the lounge, make sure the
+        // loaded aero has the same bomb loadout as the squadron
+        // We want to do this before the fighter is loaded: when the fighter
+        // is loaded into the squadron, the squadrons bombing attacks are
+        // adjusted based on the bomb loadout on the fighter.
+        if (gameManager.getGame().getPhase().isLounge() && (loader instanceof FighterSquadron)) {
+            ((IBomber) unit).setBombChoices(((FighterSquadron) loader).getExtBombChoices());
+            ((FighterSquadron) loader).updateSkills();
+            ((FighterSquadron) loader).updateWeaponGroups();
+        }
+
+        // Load the unit. Do not check for elevation during deployment
+        boolean checkElevation = !gameManager.getGame().getPhase().isLounge()
+                && !gameManager.getGame().getPhase().isDeployment();
+        try {
+            loader.load(unit, checkElevation, bayNumber);
+        } catch (IllegalArgumentException e) {
+            LogManager.getLogger().info(e.getMessage());
+            gameManager.communicationManager.sendServerChat(e.getMessage());
+            return;
+        }
+        // The loaded unit is being carried by the loader.
+        unit.setTransportId(loader.getId());
+
+        // Remove the loaded unit from the screen.
+        unit.setPosition(null);
+
+        // set deployment round of the loadee to equal that of the loader
+        unit.setDeployRound(loader.getDeployRound());
+
+        // Update the loading unit's passenger count, if it's a large craft
+        if ((loader instanceof SmallCraft) || (loader instanceof Jumpship)) {
+            // Don't add DropShip crew to a JumpShip or station's passenger list
+            if (!unit.isLargeCraft()) {
+                loader.setNPassenger(loader.getNPassenger() + unit.getCrew().getSize());
+            }
+        }
+
+        // Update the loaded unit.
+        gameManager.entityActionManager.entityUpdate(unit.getId(), gameManager);
+        gameManager.entityActionManager.entityUpdate(loader.getId(), gameManager);
+    }
+
+    /**
+     * Have the loader tow the indicated unit. The unit being towed loses its
+     * turn.
+     *  @param loader - the <code>Entity</code> that is towing the unit.
+     * @param unit   - the <code>Entity</code> being towed.
+     * @param gameManager
+     */
+    protected void towUnit(Entity loader, Entity unit, GameManager gameManager) {
+        if (!gameManager.getGame().getPhase().isLounge() && !unit.isDone()) {
+            // Remove the *last* friendly turn (removing the *first* penalizes
+            // the opponent too much, and re-calculating moves is too hard).
+            gameManager.game.removeTurnFor(unit);
+            gameManager.communicationManager.send(gameManager.packetManager.createTurnVectorPacket(gameManager));
+        }
+
+        loader.towUnit(unit.getId());
+
+        // set deployment round of the loadee to equal that of the loader
+        unit.setDeployRound(loader.getDeployRound());
+
+        // Update the loader and towed units.
+        gameManager.entityActionManager.entityUpdate(unit.getId(), gameManager);
+        gameManager.entityActionManager.entityUpdate(loader.getId(), gameManager);
+    }
+
+    /**
+     * Have the tractor drop the indicated trailer. This will also disconnect all
+     * trailers that follow the one dropped.
+     *
+     * @param tractor
+     *            - the <code>Entity</code> that is disconnecting the trailer.
+     * @param unloaded
+     *            - the <code>Targetable</code> unit being unloaded.
+     * @param pos
+     *            - the <code>Coords</code> for the unloaded unit.
+     * @param gameManager
+     * @return <code>true</code> if the unit was successfully unloaded,
+     *         <code>false</code> if the trailer isn't carried by tractor.
+     */
+    protected boolean disconnectUnit(Entity tractor, Targetable unloaded, Coords pos, GameManager gameManager) {
+        // We can only unload Entities.
+        Entity trailer;
+        if (unloaded instanceof Entity) {
+            trailer = (Entity) unloaded;
+        } else {
+            return false;
+        }
+        // disconnectUnit() updates anything behind 'trailer' too, so copy
+        // the list of trailers before we alter it so entityUpdate() can be
+        // run on all of them. Also, add the entity towing Trailer to the list
+        List<Integer> trailerList = new ArrayList<>(trailer.getConnectedUnits());
+        trailerList.add(trailer.getTowedBy());
+
+        // Unload the unit.
+        tractor.disconnectUnit(trailer.getId());
+
+        // Update the tractor and all affected trailers.
+        for (int id : trailerList) {
+            gameManager.entityActionManager.entityUpdate(id, gameManager);
+        }
+        gameManager.entityActionManager.entityUpdate(trailer.getId(), gameManager);
+        gameManager.entityActionManager.entityUpdate(tractor.getId(), gameManager);
+
+        // Unloaded successfully.
+        return true;
+    }
+
+    protected boolean unloadUnit(Entity unloader, Targetable unloaded,
+                                 Coords pos, int facing, int elevation, GameManager gameManager) {
+        return gameManager.entityActionManager.unloadUnit(unloader, unloaded, pos, facing, elevation, false,
+                false, gameManager);
+    }
+
+    /**
+     * Have the unloader unload the indicated unit. The unit being unloaded may
+     * or may not gain a turn
+     *
+     * @param unloader
+     *            - the <code>Entity</code> that is unloading the unit.
+     * @param unloaded
+     *            - the <code>Targetable</code> unit being unloaded.
+     * @param pos
+     *            - the <code>Coords</code> for the unloaded unit.
+     * @param facing
+     *            - the <code>int</code> facing for the unloaded unit.
+     * @param elevation
+     *            - the <code>int</code> elevation at which to unload, if both
+     *            loader and loaded units use VTOL movement.
+     * @param evacuation
+     *            - a <code>boolean</code> indicating whether this unit is being
+     *            unloaded as a result of its carrying units destruction
+     * @param duringDeployment
+     * @param gameManager
+     * @return <code>true</code> if the unit was successfully unloaded,
+     *         <code>false</code> if the unit isn't carried in unloader.
+     */
+    protected boolean unloadUnit(Entity unloader, Targetable unloaded,
+                                 Coords pos, int facing, int elevation, boolean evacuation,
+                                 boolean duringDeployment, GameManager gameManager) {
+
+        // We can only unload Entities.
+        Entity unit;
+        if (unloaded instanceof Entity) {
+            unit = (Entity) unloaded;
+        } else {
+            return false;
+        }
+
+        // Unload the unit.
+        if (!unloader.unload(unit)) {
+            return false;
+        }
+
+        // The unloaded unit is no longer being carried.
+        unit.setTransportId(Entity.NONE);
+
+        // Place the unloaded unit onto the screen.
+        unit.setPosition(pos);
+
+        // Units unloaded onto the screen are deployed.
+        if (pos != null) {
+            unit.setDeployed(true);
+        }
+
+        // Point the unloaded unit in the given direction.
+        unit.setFacing(facing);
+        unit.setSecondaryFacing(facing);
+
+        Hex hex = gameManager.game.getBoard().getHex(pos);
+        boolean isBridge = (hex != null)
+                && hex.containsTerrain(Terrains.PAVEMENT);
+
+        if (hex == null) {
+            unit.setElevation(elevation);
+        } else if (unloader.getMovementMode() == EntityMovementMode.VTOL) {
+            if (unit.getMovementMode() == EntityMovementMode.VTOL) {
+                // Flying units unload to the same elevation as the flying
+                // transport
+                unit.setElevation(elevation);
+            } else if (gameManager.game.getBoard().getBuildingAt(pos) != null) {
+                // non-flying unit unloaded from a flying onto a building
+                // -> sit on the roof
+                unit.setElevation(hex.terrainLevel(Terrains.BLDG_ELEV));
+            } else {
+                while (elevation >= -hex.depth()) {
+                    if (unit.isElevationValid(elevation, hex)) {
+                        unit.setElevation(elevation);
+                        break;
+                    }
+                    elevation--;
+                    // If unit is landed, the while loop breaks before here
+                    // And unit.moved will be MOVE_NONE
+                    // If we can jump, use jump
+                    if (unit.getJumpMP() > 0) {
+                        unit.moved = EntityMovementType.MOVE_JUMP;
+                    } else { // Otherwise, use walk trigger check for ziplines
+                        unit.moved = EntityMovementType.MOVE_WALK;
+                    }
+                }
+                if (!unit.isElevationValid(elevation, hex)) {
+                    return false;
+                }
+            }
+        } else if (gameManager.game.getBoard().getBuildingAt(pos) != null) {
+            // non flying unit unloading units into a building
+            // -> sit in the building at the same elevation
+            unit.setElevation(elevation);
+        } else if (hex.terrainLevel(Terrains.WATER) > 0) {
+            if ((unit.getMovementMode() == EntityMovementMode.HOVER)
+                    || (unit.getMovementMode() == EntityMovementMode.WIGE)
+                    || (unit.getMovementMode() == EntityMovementMode.HYDROFOIL)
+                    || (unit.getMovementMode() == EntityMovementMode.NAVAL)
+                    || (unit.getMovementMode() == EntityMovementMode.SUBMARINE)
+                    || (unit.getMovementMode() == EntityMovementMode.INF_UMU)
+                    || hex.containsTerrain(Terrains.ICE) || isBridge) {
+                // units that can float stay on the surface, or we go on the
+                // bridge
+                // this means elevation 0, because elevation is relative to the
+                // surface
+                unit.setElevation(0);
+            }
+        } else {
+            // default to the floor of the hex.
+            // unit elevation is relative to the surface
+            unit.setElevation(hex.floor() - hex.getLevel());
+        }
+
+        // Check for zip lines PSR -- MOVE_WALK implies ziplines
+        if (unit.moved == EntityMovementType.MOVE_WALK) {
+            if (gameManager.game.getOptions().booleanOption(OptionsConstants.ADVGRNDMOV_TACOPS_ZIPLINES)
+                    && (unit instanceof Infantry)
+                    && !((Infantry) unit).isMechanized()) {
+
+                // Handle zip lines
+                PilotingRollData psr = GameManager.getEjectModifiers(gameManager.game, unit, 0, false,
+                        unit.getPosition(), "Anti-mek skill");
+                // Factor in Elevation
+                if (unloader.getElevation() > 0) {
+                    psr.addModifier(unloader.getElevation(), "elevation");
+                }
+                Roll diceRoll = Compute.rollD6(2);
+
+                // Report ziplining
+                Report r = new Report(9920);
+                r.subject = unit.getId();
+                r.addDesc(unit);
+                r.newlines = 0;
+                gameManager.addReport(r);
+
+                // Report TN
+                r = new Report(9921);
+                r.subject = unit.getId();
+                r.add(psr.getValue());
+                r.add(psr.getDesc());
+                r.add(diceRoll);
+                r.newlines = 0;
+                gameManager.addReport(r);
+
+                if (diceRoll.getIntValue() < psr.getValue()) { // Failure!
+                    r = new Report(9923);
+                    r.subject = unit.getId();
+                    r.add(psr.getValue());
+                    r.add(diceRoll);
+                    gameManager.addReport(r);
+
+                    HitData hit = unit.rollHitLocation(ToHitData.HIT_NORMAL, ToHitData.SIDE_FRONT);
+                    hit.setIgnoreInfantryDoubleDamage(true);
+                    gameManager.reportManager.addReport(gameManager.damageEntity(unit, hit, 5), gameManager);
+                } else { //  Report success
+                    r = new Report(9922);
+                    r.subject = unit.getId();
+                    r.add(psr.getValue());
+                    r.add(diceRoll);
+                    gameManager.addReport(r);
+                }
+                gameManager.addNewLines();
+            } else {
+                return false;
+            }
+        }
+
+        gameManager.reportManager.addReport(gameManager.utilityManager.doSetLocationsExposure(unit, hex, false, unit.getElevation(), gameManager), gameManager);
+
+        // unlike other unloaders, entities unloaded from droppers can still
+        // move (unless infantry)
+        if (!evacuation && (unloader instanceof SmallCraft)
+                && !(unit instanceof Infantry)) {
+            unit.setUnloaded(false);
+            unit.setDone(false);
+
+            // unit uses half of walk mp and is treated as moving one hex
+            unit.mpUsed = unit.getOriginalWalkMP() / 2;
+            unit.delta_distance = 1;
+        }
+
+        // If we unloaded during deployment, allow a turn
+        if (duringDeployment) {
+            unit.setUnloaded(false);
+            unit.setDone(false);
+        }
+
+        //Update the transport unit's passenger count, if it's a large craft
+        if (unloader instanceof SmallCraft || unloader instanceof Jumpship) {
+            //Don't add dropship crew to a jumpship or station's passenger list
+            if (!unit.isLargeCraft()) {
+                unloader.setNPassenger(Math.max(0, unloader.getNPassenger() - unit.getCrew().getSize()));
+            }
+        }
+
+        // Update the unloaded unit.
+        gameManager.entityActionManager.entityUpdate(unit.getId(), gameManager);
+
+        // Unloaded successfully.
+        return true;
+    }
+
+    /**
+     * Do a piloting skill check to attempt landing
+     *  @param entity The <code>Entity</code> that is landing
+     * @param roll   The <code>PilotingRollData</code> to be used for this landing.
+     * @param gameManager
+     */
+    protected void attemptLanding(Entity entity, PilotingRollData roll, GameManager gameManager) {
+        if (roll.getValue() == TargetRoll.AUTOMATIC_SUCCESS) {
+            return;
+        }
+
+        // okay, print the info
+        Report r = new Report(9605);
+        r.subject = entity.getId();
+        r.addDesc(entity);
+        r.add(roll.getLastPlainDesc(), true);
+        gameManager.addReport(r);
+
+        // roll
+        final Roll diceRoll = Compute.rollD6(2);
+        r = new Report(9606);
+        r.subject = entity.getId();
+        r.add(roll.getValueAsString());
+        r.add(roll.getDesc());
+        r.add(diceRoll);
+
+        // boolean suc;
+        if (diceRoll.getIntValue() < roll.getValue()) {
+            r.choose(false);
+            gameManager.addReport(r);
+            int mof = roll.getValue() - diceRoll.getIntValue();
+            int damage = 10 * (mof);
+            // Report damage taken
+            r = new Report(9609);
+            r.indent();
+            r.addDesc(entity);
+            r.add(damage);
+            r.add(mof);
+            gameManager.addReport(r);
+
+            int side = ToHitData.SIDE_FRONT;
+            if ((entity instanceof Aero) && ((Aero) entity).isSpheroid()) {
+                side = ToHitData.SIDE_REAR;
+            }
+            while (damage > 0) {
+                HitData hit = entity.rollHitLocation(ToHitData.HIT_NORMAL, side);
+                gameManager.reportManager.addReport(gameManager.damageEntity(entity, hit, 10), gameManager);
+                damage -= 10;
+            }
+            // suc = false;
+        } else {
+            r.choose(true);
+            gameManager.addReport(r);
+            // suc = true;
+        }
+    }
+
+    /**
+     * In a double-blind game, update only visible entities. Otherwise, update
+     * everyone
+     * @param nEntityID
+     * @param gameManager
+     */
+    public void entityUpdate(int nEntityID, GameManager gameManager) {
+        gameManager.entityActionManager.entityUpdate(nEntityID, new Vector<>(), true, null, gameManager);
+    }
+
+    /**
+     * In a double-blind game, update only visible entities. Otherwise, update
+     * everyone
+     *
+     * @param nEntityID
+     * @param movePath
+     * @param updateVisibility Flag that determines if whoCanSee needs to be
+     *                         called to update who can see the entity for
+     * @param losCache
+     * @param gameManager
+     */
+    public void entityUpdate(int nEntityID, Vector<UnitLocation> movePath, boolean updateVisibility,
+                             Map<EntityTargetPair, LosEffects> losCache, GameManager gameManager) {
+        Entity eTarget = gameManager.game.getEntity(nEntityID);
+        if (eTarget == null) {
+            if (gameManager.game.getOutOfGameEntity(nEntityID) != null) {
+                LogManager.getLogger().error("S: attempted to send entity update for out of game entity, id was " + nEntityID);
+            } else {
+                LogManager.getLogger().error("S: attempted to send entity update for null entity, id was " + nEntityID);
+            }
+
+            return; // do not send the update it will crash the client
+        }
+
+        // If we're doing double blind, be careful who can see it...
+        if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
+            Vector<Player> playersVector = gameManager.game.getPlayersVector();
+            Vector<Player> vCanSee;
+            if (updateVisibility) {
+                vCanSee = gameManager.whoCanSee(eTarget, true, losCache);
+            } else {
+                vCanSee = eTarget.getWhoCanSee();
+            }
+
+            // If this unit has ECM, players with units affected by the ECM will
+            //  need to know about this entity, even if they can't see it.
+            //  Otherwise, the client can't properly report things like to-hits.
+            if ((eTarget.getECMRange() > 0) && (eTarget.getPosition() != null)) {
+                int ecmRange = eTarget.getECMRange();
+                Coords pos = eTarget.getPosition();
+                for (Entity ent : gameManager.game.getEntitiesVector()) {
+                    if ((ent.getPosition() != null)
+                            && (pos.distance(ent.getPosition()) <= ecmRange)) {
+                        if (!vCanSee.contains(ent.getOwner())) {
+                            vCanSee.add(ent.getOwner());
+                        }
+                    }
+                }
+            }
+
+            // send an entity update to everyone who can see
+            Packet pack = gameManager.communicationManager.packetManager.createEntityPacket(nEntityID, movePath, gameManager);
+            for (int x = 0; x < vCanSee.size(); x++) {
+                Player p = vCanSee.elementAt(x);
+                gameManager.communicationManager.send(p.getId(), pack);
+            }
+            // send an entity delete to everyone else
+            pack = gameManager.packetManager.createRemoveEntityPacket(nEntityID, eTarget.getRemovalCondition(), gameManager);
+            for (int x = 0; x < playersVector.size(); x++) {
+                if (!vCanSee.contains(playersVector.elementAt(x))) {
+                    Player p = playersVector.elementAt(x);
+                    gameManager.communicationManager.send(p.getId(), pack);
+                }
+            }
+
+            gameManager.entityActionManager.entityUpdateLoadedUnits(eTarget, vCanSee, playersVector, gameManager);
+        } else {
+            // But if we're not, then everyone can see.
+            gameManager.communicationManager.send(gameManager.communicationManager.packetManager.createEntityPacket(nEntityID, movePath, gameManager));
+        }
+    }
+
+    /**
+     * Whenever updating an Entity, we also need to update all of its loaded
+     * Entity's, otherwise it could cause issues with Clients.
+     *  @param loader        An Entity being updated that is transporting units that should
+     *                      also send an update
+     * @param vCanSee       The list of Players who can see the loader.
+     * @param playersVector The list of all Players
+     * @param gameManager
+     */
+    protected void entityUpdateLoadedUnits(Entity loader, Vector<Player> vCanSee,
+                                           Vector<Player> playersVector, GameManager gameManager) {
+        // In double-blind, the client may not know about the loaded units,
+        // so we need to send them.
+        for (Entity eLoaded : loader.getLoadedUnits()) {
+            // send an entity update to everyone who can see
+            Packet pack = gameManager.communicationManager.packetManager.createEntityPacket(eLoaded.getId(), null, gameManager);
+            for (int x = 0; x < vCanSee.size(); x++) {
+                Player p = vCanSee.elementAt(x);
+                gameManager.communicationManager.send(p.getId(), pack);
+            }
+            // send an entity delete to everyone else
+            pack = gameManager.packetManager.createRemoveEntityPacket(eLoaded.getId(), eLoaded.getRemovalCondition(), gameManager);
+            for (int x = 0; x < playersVector.size(); x++) {
+                if (!vCanSee.contains(playersVector.elementAt(x))) {
+                    Player p = playersVector.elementAt(x);
+                    gameManager.communicationManager.send(p.getId(), pack);
+                }
+            }
+            entityUpdateLoadedUnits(eLoaded, vCanSee, playersVector, gameManager);
+        }
+    }
+
+    /**
+     * Determine which players can detect the given entity with sensors.
+     * Because recomputing ECM and LosEffects frequently can get expensive, this
+     * data can be cached and passed in.
+     *
+     * @param entity        The Entity being detected.
+     * @param allECMInfo    Cached ECMInfo for all Entities in the game.
+     * @param losCache      Cached LosEffects for particular Entity/Targetable
+     *                      pairs.  Can be passed in null.
+     * @param gameManager
+     * @return
+     */
+    protected Vector<Player> whoCanDetect(Entity entity,
+                                          List<ECMInfo> allECMInfo,
+                                          Map<EntityTargetPair, LosEffects> losCache, GameManager gameManager) {
+        if (losCache == null) {
+            losCache = new HashMap<>();
+        }
+
+        boolean bTeamVision = gameManager.game.getOptions().booleanOption(OptionsConstants.ADVANCED_TEAM_VISION);
+        List<Entity> vEntities = gameManager.game.getEntitiesVector();
+
+        Vector<Player> vCanDetect = new Vector<>();
+
+        // If the entity is hidden, skip; no one else will be able to detect it
+        if (entity.isHidden() || entity.isOffBoard()) {
+            return vCanDetect;
+        }
+
+        for (Entity spotter : vEntities) {
+            if (!spotter.isActive() || spotter.isOffBoard()
+                    || vCanDetect.contains(spotter.getOwner())) {
+                continue;
+            }
+            // See if the LosEffects is cached, and if not cache it
+            EntityTargetPair etp = new EntityTargetPair(spotter, entity);
+            LosEffects los = losCache.get(etp);
+            if (los == null) {
+                los = LosEffects.calculateLOS(gameManager.game, spotter, entity);
+                losCache.put(etp, los);
+            }
+            if (Compute.inSensorRange(gameManager.game, los, spotter, entity, allECMInfo)) {
+                if (!vCanDetect.contains(spotter.getOwner())) {
+                    vCanDetect.addElement(spotter.getOwner());
+                }
+                if (bTeamVision) {
+                    gameManager.entityActionManager.addTeammates(vCanDetect, spotter.getOwner(), gameManager);
+                }
+                gameManager.entityActionManager.addObservers(vCanDetect, gameManager);
+            }
+        }
+
+        return vCanDetect;
+    }
+
+    /**
+     * Adds teammates of a player to the Vector. Utility function for whoCanSee.
+     * @param vector
+     * @param player
+     * @param gameManager
+     */
+    protected void addTeammates(Vector<Player> vector, Player player, GameManager gameManager) {
+        Vector<Player> playersVector = gameManager.game.getPlayersVector();
+        for (int j = 0; j < playersVector.size(); j++) {
+            Player p = playersVector.elementAt(j);
+            if (!player.isEnemyOf(p) && !vector.contains(p)) {
+                vector.addElement(p);
+            }
+        }
+    }
+
+    /**
+     * Send the complete list of entities to the players. If double_blind is in
+     * effect, enforce it by filtering the entities
+     * @param gameManager
+     */
+    protected void entityAllUpdate(GameManager gameManager) {
+        // If double-blind is in effect, filter each players' list individually,
+        // and then quit out...
+        if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
+            Vector<Player> playersVector = gameManager.game.getPlayersVector();
+            for (int x = 0; x < playersVector.size(); x++) {
+                Player p = playersVector.elementAt(x);
+                gameManager.communicationManager.send(p.getId(), gameManager.packetManager.createFilteredFullEntitiesPacket(p, null, gameManager));
+            }
+            return;
+        }
+
+        // Otherwise, send the full list.
+        gameManager.communicationManager.send(gameManager.packetManager.createEntitiesPacket(gameManager));
+    }
+
+    /**
+     * Adds observers to the Vector. Utility function for whoCanSee.
+     * @param vector
+     * @param gameManager
+     */
+    protected void addObservers(Vector<Player> vector, GameManager gameManager) {
+        Vector<Player> playersVector = gameManager.game.getPlayersVector();
+        for (int j = 0; j < playersVector.size(); j++) {
+            Player p = playersVector.elementAt(j);
+            if (p.isObserver() && !vector.contains(p)) {
+                vector.addElement(p);
+            }
+        }
+    }
+
+    /**
+     * Filters an entity vector according to LOS
+     * @param pViewer
+     * @param vEntities
+     * @param losCache
+     * @param gameManager
+     */
+    protected List<Entity> filterEntities(Player pViewer,
+                                          List<Entity> vEntities,
+                                          Map<EntityTargetPair, LosEffects> losCache, GameManager gameManager) {
+        if (losCache == null) {
+            losCache = new HashMap<>();
+        }
+        Vector<Entity> vCanSee = new Vector<>();
+        Vector<Entity> vMyEntities = new Vector<>();
+        boolean bTeamVision = gameManager.game.getOptions().booleanOption(OptionsConstants.ADVANCED_TEAM_VISION);
+
+        // If they can see all, return the input list
+        if (pViewer.canIgnoreDoubleBlind()) {
+            return vEntities;
+        }
+
+        List<ECMInfo> allECMInfo = null;
+        if (gameManager.game.getOptions().booleanOption(OptionsConstants.ADVANCED_TACOPS_SENSORS)) {
+            allECMInfo = ComputeECM.computeAllEntitiesECMInfo(gameManager.game.getEntitiesVector());
+        }
+
+        // If they're an observer, they can see anything seen by any enemy.
+        if (pViewer.isObserver()) {
+            vMyEntities.addAll(vEntities);
+            for (Entity a : vMyEntities) {
+                for (Entity b : vMyEntities) {
+                    if (a.isEnemyOf(b)
+                            && Compute.canSee(gameManager.game, b, a, true, null, allECMInfo)) {
+                        gameManager.entityActionManager.addVisibleEntity(vCanSee, a);
+                        break;
+                    }
+                }
+            }
+            return vCanSee;
+        }
+
+        // If they aren't an observer and can't see all, create the list of
+        // "friendly" units.
+        for (Entity e : vEntities) {
+            if ((e.getOwner() == pViewer) || (bTeamVision && !e.getOwner().isEnemyOf(pViewer))) {
+                vMyEntities.addElement(e);
+            }
+        }
+
+        // Then, break down the list by whether they're friendly,
+        // or whether or not any friendly unit can see them.
+        for (Entity e : vEntities) {
+            // If it's their own unit, obviously, they can see it.
+            if (vMyEntities.contains(e)) {
+                gameManager.entityActionManager.addVisibleEntity(vCanSee, e);
+                continue;
+            } else if (e.isHidden()) {
+                // If it's NOT friendly and is hidden, they can't see it, period.
+                // LOS doesn't matter.
+                continue;
+            } else if (e.isOffBoardObserved(pViewer.getTeam())) {
+                // if it's hostile and has been observed for counter-battery fire, we can "see" it
+                gameManager.entityActionManager.addVisibleEntity(vCanSee, e);
+                continue;
+            }
+
+            for (Entity spotter : vMyEntities) {
+
+                // If they're off-board, skip it; they can't see anything.
+                if (spotter.isOffBoard()) {
+                    continue;
+                }
+
+                // See if the LosEffects is cached, and if not cache it
+                EntityTargetPair etp = new EntityTargetPair(spotter, e);
+                LosEffects los = losCache.get(etp);
+                if (los == null) {
+                    los = LosEffects.calculateLOS(gameManager.game, spotter, e);
+                    losCache.put(etp, los);
+                }
+                // Otherwise, if they can see the entity in question
+                if (Compute.canSee(gameManager.game, spotter, e, true, los, allECMInfo)) {
+                    gameManager.entityActionManager.addVisibleEntity(vCanSee, e);
+                    break;
+                }
+
+                // If this unit has ECM, players with units affected by the ECM
+                //  will need to know about this entity, even if they can't see
+                //  it.  Otherwise, the client can't properly report things
+                //  like to-hits.
+                if ((e.getECMRange() > 0) && (e.getPosition() != null) &&
+                        (spotter.getPosition() != null)) {
+                    int ecmRange = e.getECMRange();
+                    Coords pos = e.getPosition();
+                    if (pos.distance(spotter.getPosition()) <= ecmRange) {
+                        gameManager.entityActionManager.addVisibleEntity(vCanSee, e);
+                    }
+                }
+            }
+        }
+
+        return vCanSee;
+    }
+
+    /**
+     * Recursive method to add an <code>Entity</code> and all of its transported
+     * units to the list of units visible to a particular player. It is
+     * important to ensure that if a unit is in the list of visible units then
+     * all of its transported units (and their transported units, and so on) are
+     * also considered visible, otherwise it can lead to issues. This method
+     * also ensures that no duplicate Entities are added.
+     *  @param vCanSee A collection of units that can be see
+     * @param e       An Entity that is seen and needs to be added to the collection
+     */
+    protected void addVisibleEntity(Vector<Entity> vCanSee, Entity e) {
+        if (!vCanSee.contains(e)) {
+            vCanSee.add(e);
+        }
+        for (Entity transported : e.getLoadedUnits()) {
+            addVisibleEntity(vCanSee, transported);
+        }
+    }
+
+    /**
+     * Checks if ejected MechWarriors are eligible to be picked up, and if so,
+     * captures them or picks them up
+     * @param gameManager
+     */
+    protected void resolveMechWarriorPickUp(GameManager gameManager) {
+        Report r;
+
+        // fetch all mechWarriors that are not picked up
+        Iterator<Entity> mechWarriors = gameManager.game.getSelectedEntities(entity -> {
+            if (entity instanceof MechWarrior) {
+                MechWarrior mw = (MechWarrior) entity;
+                return (mw.getPickedUpById() == Entity.NONE)
+                        && !mw.isDoomed()
+                        && (mw.getTransportId() == Entity.NONE);
+            }
+            return false;
+        });
+        // loop through them, check if they are in a hex occupied by another
+        // unit
+        while (mechWarriors.hasNext()) {
+            boolean pickedUp = false;
+            MechWarrior e = (MechWarrior) mechWarriors.next();
+            // Check for owner entities first...
+            for (Entity pe : gameManager.game.getEntitiesVector(e.getPosition())) {
+                if (pe.isDoomed() || pe.isShutDown() || pe.getCrew().isUnconscious()
+                        || (pe.isAirborne() && !pe.isSpaceborne())
+                        || (pe.getElevation() != e.getElevation())
+                        || (pe.getOwnerId() != e.getOwnerId())
+                        || (pe.getId() == e.getId())) {
+                    continue;
+                }
+                if (pe instanceof MechWarrior) {
+                    // MWs have a beer together
+                    r = new Report(6415, Report.PUBLIC);
+                    r.add(pe.getDisplayName());
+                    gameManager.addReport(r);
+                    continue;
+                }
+                // Pick up the unit.
+                pe.pickUp(e);
+                // The picked unit is being carried by the loader.
+                e.setPickedUpById(pe.getId());
+                e.setPickedUpByExternalId(pe.getExternalIdAsString());
+                pickedUp = true;
+                r = new Report(6420, Report.PUBLIC);
+                r.add(e.getDisplayName());
+                r.addDesc(pe);
+                gameManager.addReport(r);
+                break;
+            }
+            // Check for allied entities next...
+            if (!pickedUp) {
+                for (Entity pe : gameManager.game.getEntitiesVector(e.getPosition())) {
+                    if (pe.isDoomed() || pe.isShutDown() || pe.getCrew().isUnconscious()
+                            || (pe.isAirborne() && !pe.isSpaceborne())
+                            || (pe.getElevation() != e.getElevation())
+                            || (pe.getOwnerId() == e.getOwnerId()) || (pe.getId() == e.getId())
+                            || (pe.getOwner().getTeam() == Player.TEAM_NONE)
+                            || (pe.getOwner().getTeam() != e.getOwner().getTeam())) {
+                        continue;
+                    }
+                    if (pe instanceof MechWarrior) {
+                        // MWs have a beer together
+                        r = new Report(6416, Report.PUBLIC);
+                        r.add(pe.getDisplayName());
+                        gameManager.addReport(r);
+                        continue;
+                    }
+                    // Pick up the unit.
+                    pe.pickUp(e);
+                    // The picked unit is being carried by the loader.
+                    e.setPickedUpById(pe.getId());
+                    e.setPickedUpByExternalId(pe.getExternalIdAsString());
+                    pickedUp = true;
+                    r = new Report(6420, Report.PUBLIC);
+                    r.add(e.getDisplayName());
+                    r.addDesc(pe);
+                    gameManager.addReport(r);
+                    break;
+                }
+            }
+            // Now check for anyone else...
+            if (!pickedUp) {
+                Iterator<Entity> pickupEnemyEntities = gameManager.game.getEnemyEntities(e.getPosition(), e);
+                while (pickupEnemyEntities.hasNext()) {
+                    Entity pe = pickupEnemyEntities.next();
+                    if (pe.isDoomed() || pe.isShutDown() || pe.getCrew().isUnconscious()
+                            || pe.isAirborne() || (pe.getElevation() != e.getElevation())) {
+                        continue;
+                    }
+                    if (pe instanceof MechWarrior) {
+                        // MWs have a beer together
+                        r = new Report(6417, Report.PUBLIC);
+                        r.add(pe.getDisplayName());
+                        gameManager.addReport(r);
+                        continue;
+                    }
+                    // Capture the unit.
+                    pe.pickUp(e);
+                    // The captured unit is being carried by the loader.
+                    e.setCaptured(true);
+                    e.setPickedUpById(pe.getId());
+                    e.setPickedUpByExternalId(pe.getExternalIdAsString());
+                    pickedUp = true;
+                    r = new Report(6420, Report.PUBLIC);
+                    r.add(e.getDisplayName());
+                    r.addDesc(pe);
+                    gameManager.addReport(r);
+                    break;
+                }
+            }
+            if (pickedUp) {
+                // Remove the picked-up unit from the screen.
+                e.setPosition(null);
+                // Update the loaded unit.
+                entityUpdate(e.getId(), gameManager);
+            }
+        }
+    }
+
+    /**
+     * let all Entities make their "break-free-of-swamp-stickyness" PSR
+     * @param gameManager
+     */
+    protected void doTryUnstuck(GameManager gameManager) {
+        if (!gameManager.getGame().getPhase().isMovement()) {
+            return;
+        }
+
+        Report r;
+
+        Iterator<Entity> stuckEntities = gameManager.game.getSelectedEntities(Entity::isStuck);
+        PilotingRollData rollTarget;
+        while (stuckEntities.hasNext()) {
+            Entity entity = stuckEntities.next();
+            if (entity.getPosition() == null) {
+                if (entity.isDeployed()) {
+                    LogManager.getLogger().info("Entity #" + entity.getId() + " does not know its position.");
+                } else { // If the Entity isn't deployed, then something goofy
+                    // happened.  We'll just unstuck the Entity
+                    entity.setStuck(false);
+                    LogManager.getLogger().info("Entity #" + entity.getId() + " was stuck in a swamp, but not deployed. Stuck state reset");
+                }
+                continue;
+            }
+            rollTarget = entity.getBasePilotingRoll();
+            entity.addPilotingModifierForTerrain(rollTarget);
+            // apart from swamp & liquid magma, -1 modifier
+            Hex hex = gameManager.game.getBoard().getHex(entity.getPosition());
+            hex.getUnstuckModifier(entity.getElevation(), rollTarget);
+            // okay, print the info
+            r = new Report(2340);
+            r.subject = entity.getId();
+            r.addDesc(entity);
+            gameManager.addReport(r);
+
+            // roll
+            final Roll diceRoll = entity.getCrew().rollPilotingSkill();
+            r = new Report(2190);
+            r.subject = entity.getId();
+            r.add(rollTarget.getValueAsString());
+            r.add(rollTarget.getDesc());
+            r.add(diceRoll);
+
+            if (diceRoll.getIntValue() < rollTarget.getValue()) {
+                r.choose(false);
+            } else {
+                r.choose(true);
+                entity.setStuck(false);
+                entity.setCanUnstickByJumping(false);
+                entity.setElevation(0);
+                entityUpdate(entity.getId(), gameManager);
+            }
+            gameManager.addReport(r);
+        }
+    }
+
+    /**
+     * Remove all iNarc pods from all vehicles that did not move and shoot this
+     * round NOTE: this is not quite what the rules say, the player should be
+     * able to choose whether or not to remove all iNarc Pods that are attached.
+     * @param gameManager
+     */
+    protected void resolveVeeINarcPodRemoval(GameManager gameManager) {
+        Iterator<Entity> vees = gameManager.game.getSelectedEntities(
+                entity -> (entity instanceof Tank) && (entity.mpUsed == 0));
+        boolean canSwipePods;
+        while (vees.hasNext()) {
+            canSwipePods = true;
+            Entity entity = vees.next();
+            for (int i = 0; i <= 5; i++) {
+                if (entity.weaponFiredFrom(i)) {
+                    canSwipePods = false;
+                }
+            }
+            if (((Tank) entity).getStunnedTurns() > 0) {
+                canSwipePods = false;
+            }
+            if (canSwipePods && entity.hasINarcPodsAttached()
+                    && entity.getCrew().isActive()) {
+                entity.removeAllINarcPods();
+                Report r = new Report(2345);
+                r.addDesc(entity);
+                gameManager.addReport(r);
+            }
+        }
+    }
+
+    /**
+     * remove Ice in the hex that's at the passed coords, and let entities fall
+     * into water below it, if there is water
+     *
+     * @param c the <code>Coords</code> of the hex where ice should be removed
+     * @param gameManager
+     * @return a <code>Vector<Report></code> for the phase report
+     */
+    protected Vector<Report> resolveIceBroken(Coords c, GameManager gameManager) {
+        Vector<Report> vPhaseReport = new Vector<>();
+        Hex hex = gameManager.game.getBoard().getHex(c);
+        hex.removeTerrain(Terrains.ICE);
+        gameManager.communicationManager.sendChangedHex(c, gameManager);
+        // if there is water below the ice
+        if (hex.terrainLevel(Terrains.WATER) > 0) {
+            // drop entities on the surface into the water
+            for (Entity e : gameManager.game.getEntitiesVector(c)) {
+                // If the unit is on the surface, and is no longer allowed in
+                // the hex
+                boolean isHoverOrWiGE = (e.getMovementMode() == EntityMovementMode.HOVER)
+                        || (e.getMovementMode() == EntityMovementMode.WIGE);
+                if ((e.getElevation() == 0)
+                        && !(hex.containsTerrain(Terrains.BLDG_ELEV, 0))
+                        && !(isHoverOrWiGE && (e.getRunMP() >= 0))
+                        && (e.getMovementMode() != EntityMovementMode.INF_UMU)
+                        && !e.hasUMU()
+                        && !(e instanceof QuadVee && e.getConversionMode() == QuadVee.CONV_MODE_VEHICLE)) {
+                    vPhaseReport.addAll(gameManager.utilityManager.doEntityFallsInto(e, c,
+                            new PilotingRollData(TargetRoll.AUTOMATIC_FAIL),
+                            true, gameManager));
+                }
+            }
+        }
+        return vPhaseReport;
+    }
+
+    /**
+     * melt any snow or ice in a hex, including checking for the effects of
+     * breaking through ice
+     * @param c
+     * @param entityId
+     * @param gameManager
+     */
+    protected Vector<Report> meltIceAndSnow(Coords c, int entityId, GameManager gameManager) {
+        Vector<Report> vDesc = new Vector<>();
+        Report r;
+        Hex hex = gameManager.game.getBoard().getHex(c);
+        r = new Report(3069);
+        r.indent(2);
+        r.subject = entityId;
+        vDesc.add(r);
+        if (hex.containsTerrain(Terrains.SNOW)) {
+            hex.removeTerrain(Terrains.SNOW);
+            gameManager.communicationManager.sendChangedHex(c, gameManager);
+        }
+        if (hex.containsTerrain(Terrains.ICE)) {
+            vDesc.addAll(resolveIceBroken(c, gameManager));
+        }
+        // if we were not in water, then add mud
+        if (!hex.containsTerrain(Terrains.MUD) && !hex.containsTerrain(Terrains.WATER)) {
+            hex.addTerrain(new Terrain(Terrains.MUD, 1));
+            gameManager.communicationManager.sendChangedHex(c, gameManager);
+        }
+        return vDesc;
+    }
+
+    protected Vector<Report> resolveVehicleFire(Tank tank, boolean existingStatus, GameManager gameManager) {
+        Vector<Report> vPhaseReport = new Vector<>();
+        if (existingStatus && !tank.isOnFire()) {
+            return vPhaseReport;
+        }
+        for (int i = 0; i < tank.locations(); i++) {
+            if ((i == Tank.LOC_BODY) || ((tank instanceof VTOL) && (i == VTOL.LOC_ROTOR))) {
+                continue;
+            }
+            if (existingStatus && !tank.isLocationBurning(i)) {
+                continue;
+            }
+            HitData hit = new HitData(i);
+            int damage = Compute.d6(1);
+            vPhaseReport.addAll(gameManager.damageEntity(tank, hit, damage));
+            if ((damage == 1) && existingStatus) {
+                tank.extinguishLocation(i);
+            }
+        }
+        return vPhaseReport;
+    }
+
+    /**
+     * do vehicle movement damage
+     *
+     * @param te         the Tank to damage
+     * @param modifier   the modifier to the roll
+     * @param noRoll     don't roll, immediately deal damage
+     * @param damageType the type to deal (1 = minor, 2 = moderate, 3 = heavy
+     * @param jumpDamage is this a movement damage roll from using vehicular JJs
+     * @param gameManager
+     * @return a <code>Vector<Report></code> containing what to add to the turn log
+     */
+    protected Vector<Report> vehicleMotiveDamage(Tank te, int modifier, boolean noRoll,
+                                                 int damageType, boolean jumpDamage, GameManager gameManager) {
+        Vector<Report> vDesc = new Vector<>();
+        Report r;
+        switch (te.getMovementMode()) {
+            case HOVER:
+            case HYDROFOIL:
+                if (jumpDamage) {
+                    modifier -= 1;
+                } else {
+                    modifier += 3;
+                }
+                break;
+            case WHEELED:
+                if (jumpDamage) {
+                    modifier += 1;
+                } else {
+                    modifier += 2;
+                }
+                break;
+            case WIGE:
+                if (jumpDamage) {
+                    modifier -= 2;
+                } else {
+                    modifier += 4;
+                }
+                break;
+            case TRACKED:
+                if (jumpDamage) {
+                    modifier += 2;
+                }
+                break;
+            case VTOL:
+                // VTOL don't roll, auto -1 MP as long as the rotor location
+                // still exists (otherwise don't bother reporting).
+                if (!(te.isLocationBad(VTOL.LOC_ROTOR) || te.isLocationDoomed(VTOL.LOC_ROTOR))) {
+                    te.setMotiveDamage(te.getMotiveDamage() + 1);
+                    if (te.getOriginalWalkMP() > te.getMotiveDamage()) {
+                        r = new Report(6660);
+                        r.indent(3);
+                        r.subject = te.getId();
+                        vDesc.add(r);
+                    } else {
+                        r = new Report(6670);
+                        r.subject = te.getId();
+                        vDesc.add(r);
+                        te.immobilize();
+                        // Being reduced to 0 MP by rotor damage forces a
+                        // landing
+                        // like an engine hit...
+                        if (te.isAirborneVTOLorWIGE()
+                                // ...but don't bother to resolve that if we're
+                                // already otherwise destroyed.
+                                && !(te.isDestroyed() || te.isDoomed())) {
+                            vDesc.addAll(forceLandVTOLorWiGE(te, gameManager));
+                        }
+                    }
+                }
+                // This completes our handling of VTOLs; the rest of the method
+                // doesn't need to worry about them anymore.
+                return vDesc;
+            default:
+                break;
+        }
+        // Apply vehicle effectiveness...except for hits from jumps.
+        if (gameManager.game.getOptions().booleanOption(OptionsConstants.ADVCOMBAT_TACOPS_VEHICLE_EFFECTIVE)
+                && !jumpDamage) {
+            modifier = Math.max(modifier - 1, 0);
+        }
+
+        if (te.hasWorkingMisc(MiscType.F_ARMORED_MOTIVE_SYSTEM)) {
+            modifier -= 2;
+        }
+
+        Roll diceRoll = Compute.rollD6(2);
+        int rollValue = diceRoll.getIntValue() + modifier;
+        String rollCalc = rollValue + " [" + diceRoll.getIntValue() + " + " + modifier + "]";
+        r = new Report(6306);
+        r.subject = te.getId();
+        r.newlines = 0;
+        r.indent(3);
+        vDesc.add(r);
+
+        if (!noRoll) {
+            r = new Report(6310);
+            r.subject = te.getId();
+            if (modifier != 0) {
+                r.addDataWithTooltip(rollCalc, diceRoll.getReport());
+            } else {
+                r.add(diceRoll);
+            }
+            r.newlines = 0;
+            vDesc.add(r);
+            r = new Report(3340);
+            r.add(modifier);
+            r.subject = te.getId();
+            vDesc.add(r);
+        }
+
+        if ((noRoll && (damageType == 0)) || (!noRoll && (rollValue <= 5))) {
+            // no effect
+            r = new Report(6005);
+            r.subject = te.getId();
+            r.indent(3);
+            vDesc.add(r);
+        } else if ((noRoll && (damageType == 1)) || (!noRoll && (rollValue <= 7))) {
+            // minor damage
+            r = new Report(6470);
+            r.subject = te.getId();
+            r.indent(3);
+            vDesc.add(r);
+            te.addMovementDamage(1);
+        } else if ((noRoll && (damageType == 2)) || (!noRoll && (rollValue <= 9))) {
+            // moderate damage
+            r = new Report(6471);
+            r.subject = te.getId();
+            r.indent(3);
+            vDesc.add(r);
+            te.addMovementDamage(2);
+        } else if ((noRoll && (damageType == 3)) || (!noRoll && (rollValue <= 11))) {
+            // heavy damage
+            r = new Report(6472);
+            r.subject = te.getId();
+            r.indent(3);
+            vDesc.add(r);
+            te.addMovementDamage(3);
+        } else {
+            r = new Report(6473);
+            r.subject = te.getId();
+            r.indent(3);
+            vDesc.add(r);
+            te.addMovementDamage(4);
+        }
+        // These checks should perhaps be moved to Tank.applyDamage(), but I'm
+        // unsure how to *report* any outcomes from there. Note that these treat
+        // being reduced to 0 MP and being actually immobilized as the same thing,
+        // which for these particular purposes may or may not be the intent of
+        // the rules in all cases (for instance, motive-immobilized CVs can still jump).
+        // Immobile hovercraft on water sink...
+        if (!te.isOffBoard() && (te.getMovementMode() == EntityMovementMode.HOVER
+                && (te.isMovementHitPending() || (te.getWalkMP() <= 0))
+                // HACK: Have to check for *pending* hit here and below.
+                && (gameManager.game.getBoard().getHex(te.getPosition()).terrainLevel(Terrains.WATER) > 0)
+                && !gameManager.game.getBoard().getHex(te.getPosition()).containsTerrain(Terrains.ICE))) {
+            vDesc.addAll(destroyEntity(te, "a watery grave", false, gameManager));
+        }
+        // ...while immobile WiGEs crash.
+        if (((te.getMovementMode() == EntityMovementMode.WIGE) && (te.isAirborneVTOLorWIGE()))
+                && (te.isMovementHitPending() || (te.getWalkMP() <= 0))) {
+            // report problem: add tab
+            vDesc.addAll(crashVTOLorWiGE(te, gameManager));
+        }
         return vDesc;
     }
 }

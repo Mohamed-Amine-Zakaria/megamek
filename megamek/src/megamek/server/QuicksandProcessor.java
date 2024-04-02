@@ -57,7 +57,7 @@ public class QuicksandProcessor extends DynamicTerrainProcessor {
                     // sink any units that occupy this hex
                     for (Entity entity : game.getEntitiesVector(currentCoords)) {
                         if (entity.isStuck()) {
-                            gameManager.doSinkEntity(entity);
+                            gameManager.environmentalEffectManager.doSinkEntity(entity, gameManager);
                         }
                     }
                 } else if (currentHex.terrainLevel(Terrains.SWAMP) == 2) {

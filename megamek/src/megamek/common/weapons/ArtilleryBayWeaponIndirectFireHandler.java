@@ -520,9 +520,9 @@ public class ArtilleryBayWeaponIndirectFireHandler extends AmmoBayWeaponHandler 
             }
             // Here we're doing damage for each hit with more standard artillery shells
             while (nweaponsHit > 0) {
-                gameManager.artilleryDamageArea(targetPos, aaa.getCoords(), atype,
+                gameManager.environmentalEffectManager.artilleryDamageArea(targetPos, aaa.getCoords(), atype,
                         subjectId, ae, isFlak, altitude, mineClear, vPhaseReport,
-                        asfFlak, -1);
+                        asfFlak, -1, gameManager);
                 nweaponsHit--;
             }
         } else {
@@ -542,8 +542,8 @@ public class ArtilleryBayWeaponIndirectFireHandler extends AmmoBayWeaponHandler 
                         gameManager.environmentalEffectManager.removeMinefield(mf, gameManager);
                     }
                 }
-                gameManager.artilleryDamageArea(c, aaa.getCoords(), atype, subjectId, ae, isFlak,
-                        altitude, mineClear, vPhaseReport, asfFlak, -1);
+                gameManager.environmentalEffectManager.artilleryDamageArea(c, aaa.getCoords(), atype, subjectId, ae, isFlak,
+                        altitude, mineClear, vPhaseReport, asfFlak, -1, gameManager);
             }
 
         }

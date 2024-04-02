@@ -489,7 +489,7 @@ public class ServerHelper {
                 gameManager.communicationManager.sendChangedHex(curPos, gameManager);
                 for (Entity en : entity.getGame().getEntitiesVector(curPos)) {
                     if (en != entity) {
-                        gameManager.doMagmaDamage(en, false);
+                        gameManager.environmentalEffectManager.doMagmaDamage(en, false, gameManager);
                     }
                 }
             }
@@ -502,7 +502,7 @@ public class ServerHelper {
     public static void checkEnteringMagma(Hex hex, int elevation, Entity entity, GameManager gameManager) {
 
         if ((hex.terrainLevel(Terrains.MAGMA) == 2) && (elevation == 0) && (entity.getMovementMode() != EntityMovementMode.HOVER)) {
-            gameManager.doMagmaDamage(entity, false);
+            gameManager.environmentalEffectManager.doMagmaDamage(entity, false, gameManager);
         }
     }
 
@@ -683,7 +683,7 @@ public class ServerHelper {
             LosEffects los = LosEffects.calculateLOS(game, detector, detected, detectorCoords, detected.getPosition(), false);
             if (los.canSee() || !beyondPointBlankRange) {
                 detected.setHidden(false);
-                gameManager.entityUpdate(detected.getId());
+                gameManager.entityActionManager.entityUpdate(detected.getId(), gameManager);
                 Report r = new Report(9960);
                 r.addDesc(detector);
                 r.subject = detector.getId();
@@ -715,7 +715,7 @@ public class ServerHelper {
         for (Entity entity : game.getEntitiesVector()) {
             if (entity.getBloodStalkerTarget() == stalkeeID) {
                 entity.setBloodStalkerTarget(Entity.BLOOD_STALKER_TARGET_CLEARED);
-                gameManager.entityUpdate(entity.getId());
+                gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
             }
         }
     }

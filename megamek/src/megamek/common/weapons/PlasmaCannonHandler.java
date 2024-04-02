@@ -158,8 +158,8 @@ public class PlasmaCannonHandler extends AmmoWeaponHandler {
             hits = calcHits(vPhaseReport);
             // Plasma Cannons do double damage per-hit to buildings
             int nDamage = 2 * hits;
-            Vector<Report> buildingReport = gameManager.damageBuilding(coverBuilding, nDamage,
-                    " blocks the shot and takes ", coverLoc);
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(coverBuilding, nDamage,
+                    " blocks the shot and takes ", coverLoc, gameManager);
             target = origTarget;
             for (Report report : buildingReport) {
                 report.subject = subjectId;
@@ -167,8 +167,8 @@ public class PlasmaCannonHandler extends AmmoWeaponHandler {
             }
             vPhaseReport.addAll(buildingReport);
             // Damage any infantry in the building.
-            Vector<Report> infantryReport = gameManager.damageInfantryIn(coverBuilding, nDamage,
-                    coverLoc, wtype.getInfantryDamageClass());
+            Vector<Report> infantryReport = gameManager.environmentalEffectManager.damageInfantryIn(coverBuilding, nDamage,
+                    coverLoc, wtype.getInfantryDamageClass(), gameManager);
             for (Report report : infantryReport) {
                 report.indent(2);
             }

@@ -28,7 +28,7 @@ public class PacketManager {
     protected Packet createFilteredEntitiesPacket(Player p,
                                                   Map<EntityTargetPair, LosEffects> losCache, GameManager gameManager) {
         return new Packet(PacketCommand.SENDING_ENTITIES,
-                gameManager.filterEntities(p, gameManager.getGame().getEntitiesVector(), losCache));
+                gameManager.entityActionManager.filterEntities(p, gameManager.getGame().getEntitiesVector(), losCache, gameManager));
     }
 
     /**
@@ -49,7 +49,7 @@ public class PacketManager {
         // When the final report is created, MM sends a null player to create the report. This will
         // handle that issue.
         return new Packet(PacketCommand.SENDING_REPORTS,
-                (p == null) || !gameManager.doBlind() ? gameManager.vPhaseReport : gameManager.filterReportVector(gameManager.vPhaseReport, p));
+                (p == null) || !gameManager.environmentalEffectManager.doBlind(gameManager) ? gameManager.vPhaseReport : gameManager.filterReportVector(gameManager.vPhaseReport, p));
     }
 
     /**
@@ -150,7 +150,7 @@ public class PacketManager {
     protected Packet createFilteredFullEntitiesPacket(Player p,
                                                       Map<EntityTargetPair, LosEffects> losCache, GameManager gameManager) {
         return new Packet(PacketCommand.SENDING_ENTITIES,
-                gameManager.filterEntities(p, gameManager.getGame().getEntitiesVector(), losCache),
+                gameManager.entityActionManager.filterEntities(p, gameManager.getGame().getEntitiesVector(), losCache, gameManager),
                 gameManager.getGame().getOutOfGameEntitiesVector(), gameManager.getGame().getForces());
     }
 
@@ -288,7 +288,7 @@ public class PacketManager {
      */
     protected Packet createTacticalGeniusReportPacket(Player p, GameManager gameManager) {
         return new Packet(PacketCommand.SENDING_REPORTS_TACTICAL_GENIUS,
-                (p == null) || !gameManager.doBlind() ? gameManager.vPhaseReport.clone() : gameManager.filterReportVector(gameManager.vPhaseReport, p));
+                (p == null) || !gameManager.environmentalEffectManager.doBlind(gameManager) ? gameManager.vPhaseReport.clone() : gameManager.filterReportVector(gameManager.vPhaseReport, p));
     }
 
     /**

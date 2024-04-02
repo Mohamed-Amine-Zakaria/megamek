@@ -140,7 +140,7 @@ public class UtilityManager {
             gameManager.game.resetPSRs(entity);
             entity.applyDamage();
             Report.addNewline(vBoomReport);
-            gameManager.entityUpdate(entity.getId());
+            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
         }
 
         // check the direct reduction of mine
@@ -170,7 +170,7 @@ public class UtilityManager {
                 r.add(entity.getShortName(), true);
                 gameManager.addReport(r);
                 gameManager.reportManager.addReport(gameManager.entityActionManager.destroyEntity(swarmer, "a watery grave", false, gameManager), gameManager);
-                gameManager.entityUpdate(swarmerId);
+                gameManager.entityActionManager.entityUpdate(swarmerId, gameManager);
             }
         }
     }
@@ -946,7 +946,7 @@ public class UtilityManager {
                             vPhaseReport.addAll(gameManager.utilityManager.doEntityDisplacement(violation, dest, targetDest, prd, gameManager));
                             // Update the violating entity's position on the
                             // client.
-                            gameManager.entityUpdate(violation.getId());
+                            gameManager.entityActionManager.entityUpdate(violation.getId(), gameManager);
                         } else {
                             // ack! automatic death! Tanks
                             // suffer an ammo/power plant hit.
@@ -973,7 +973,7 @@ public class UtilityManager {
                                 "pushed off a cliff"),
                         false, gameManager));
                 // Update the entity's position on the client.
-                gameManager.entityUpdate(entity.getId());
+                gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
             } else {
                 // ack! automatic death! Tanks
                 // suffer an ammo/power plant hit.
@@ -996,7 +996,7 @@ public class UtilityManager {
                 vPhaseReport.addAll(gameManager.utilityManager.doEntityDisplacement(violation, dest, targetDest, prd, gameManager));
                 // Update the violating entity's position on the client.
                 if (!gameManager.game.getOutOfGameEntitiesVector().contains(violation)) {
-                    gameManager.entityUpdate(violation.getId());
+                    gameManager.entityActionManager.entityUpdate(violation.getId(), gameManager);
                 }
             }
         }
@@ -1079,12 +1079,12 @@ public class UtilityManager {
         if (bldg != null) {
             if (destHex.terrainLevel(Terrains.BLDG_ELEV) > oldElev) {
                 // whoops, into the building we go
-                gameManager.passBuildingWall(entity, gameManager.game.getBoard().getBuildingAt(dest), src, dest, 1,
+                gameManager.environmentalEffectManager.passBuildingWall(entity, gameManager.game.getBoard().getBuildingAt(dest), src, dest, 1,
                         "displaced into",
                         Math.abs(entity.getFacing() - src.direction(dest)) == 3,
-                        entity.moved, true);
+                        entity.moved, true, gameManager);
             }
-            gameManager.checkBuildingCollapseWhileMoving(bldg, entity, dest);
+            gameManager.environmentalEffectManager.checkBuildingCollapseWhileMoving(bldg, entity, dest, gameManager);
         }
 
         ServerHelper.checkAndApplyMagmaCrust(destHex, entity.getElevation(), entity, dest, false, vPhaseReport, gameManager);
@@ -1152,7 +1152,7 @@ public class UtilityManager {
                 vPhaseReport.add(r);
 
                 if (diceRoll.getIntValue() == 6) {
-                    vPhaseReport.addAll(gameManager.resolveIceBroken(dest));
+                    vPhaseReport.addAll(gameManager.entityActionManager.resolveIceBroken(dest, gameManager));
                 }
             }
         }
@@ -1175,7 +1175,7 @@ public class UtilityManager {
             }
         }
         // Update the entity's position on the client.
-        gameManager.entityUpdate(entity.getId());
+        gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
 
         if (violation != null) {
             // Can the violating unit move out of the way?
@@ -1281,7 +1281,7 @@ public class UtilityManager {
             // Update the violating entity's position on the client,
             // if it didn't get displaced off the board.
             if (!gameManager.game.isOutOfGame(violation)) {
-                gameManager.entityUpdate(violation.getId());
+                gameManager.entityActionManager.entityUpdate(violation.getId(), gameManager);
             }
         }
         return vPhaseReport;
@@ -1839,7 +1839,7 @@ public class UtilityManager {
                 entity.addBeenSeenBy(p);
             }
             // Handle detection by sensors
-            for (Player p : gameManager.whoCanDetect(entity, allECMInfo, losCache)) {
+            for (Player p : gameManager.entityActionManager.whoCanDetect(entity, allECMInfo, losCache, gameManager)) {
                 entity.addBeenDetectedBy(p);
             }
         }

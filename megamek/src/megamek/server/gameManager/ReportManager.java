@@ -343,7 +343,7 @@ public class ReportManager {
                 }
             }
 
-            if (!gameManager.doBlind()) {
+            if (!gameManager.environmentalEffectManager.doBlind(gameManager)) {
                 // The turn order is different in movement phase
                 // if a player has any "even" moving units.
                 r = new Report(1020, Report.PUBLIC);

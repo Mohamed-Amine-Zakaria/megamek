@@ -674,7 +674,7 @@ public class CombatManager {
             if (targetInBuilding && (bldg != null)) {
                 // Only report if damage was done to the building.
                 if (damage > 0) {
-                    Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+                    Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
                     for (Report report : buildingReport) {
                         report.subject = ae.getId();
                     }
@@ -696,14 +696,14 @@ public class CombatManager {
             r = new Report(4040);
             r.subject = ae.getId();
             gameManager.addReport(r);
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
             gameManager.reportManager.addReport(buildingReport, gameManager);
 
             // Damage any infantry in the hex.
-            gameManager.reportManager.addReport(gameManager.damageInfantryIn(bldg, damage, target.getPosition()), gameManager);
+            gameManager.reportManager.addReport(gameManager.environmentalEffectManager.damageInfantryIn(bldg, damage, target.getPosition(), gameManager), gameManager);
 
             if (paa.isZweihandering()) {
                 gameManager.applyZweihanderSelfDamage(ae, false,  Mech.LOC_RARM, Mech.LOC_LARM);
@@ -728,7 +728,7 @@ public class CombatManager {
             int toBldg = Math.min(bldgAbsorbs, damage);
             damage -= toBldg;
             gameManager.addNewLines();
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, toBldg, target.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, toBldg, target.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
@@ -945,7 +945,7 @@ public class CombatManager {
             if (targetInBuilding && (bldg != null)) {
                 // Only report if damage was done to the building.
                 if (damage > 0) {
-                    Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+                    Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
                     for (Report report : buildingReport) {
                         report.subject = ae.getId();
                     }
@@ -962,14 +962,14 @@ public class CombatManager {
             r = new Report(4040);
             r.subject = ae.getId();
             gameManager.addReport(r);
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
             gameManager.reportManager.addReport(buildingReport, gameManager);
 
             // Damage any infantry in the hex.
-            gameManager.reportManager.addReport(gameManager.damageInfantryIn(bldg, damage, target.getPosition()), gameManager);
+            gameManager.reportManager.addReport(gameManager.environmentalEffectManager.damageInfantryIn(bldg, damage, target.getPosition(), gameManager), gameManager);
 
             // And we're done!
             return;
@@ -990,7 +990,7 @@ public class CombatManager {
             int toBldg = Math.min(bldgAbsorbs, damage);
             damage -= toBldg;
             gameManager.addNewLines();
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
@@ -1179,7 +1179,7 @@ public class CombatManager {
                 damage += pr.damageRight;
                 // Only report if damage was done to the building.
                 if (damage > 0) {
-                    Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+                    Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
                     for (Report report : buildingReport) {
                         report.subject = ae.getId();
                     }
@@ -1197,14 +1197,14 @@ public class CombatManager {
             r = new Report(4040);
             r.subject = ae.getId();
             gameManager.addReport(r);
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
             gameManager.reportManager.addReport(buildingReport, gameManager);
 
             // Damage any infantry in the hex.
-            gameManager.reportManager.addReport(gameManager.damageInfantryIn(bldg, damage, target.getPosition()), gameManager);
+            gameManager.reportManager.addReport(gameManager.environmentalEffectManager.damageInfantryIn(bldg, damage, target.getPosition(), gameManager), gameManager);
 
             // And we're done!
             return;
@@ -1232,7 +1232,7 @@ public class CombatManager {
                 int toBldg = Math.min(bldgAbsorbs, damage);
                 damage -= toBldg;
                 gameManager.addNewLines();
-                Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+                Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
                 for (Report report : buildingReport) {
                     report.subject = ae.getId();
                 }
@@ -1370,7 +1370,7 @@ public class CombatManager {
             if (targetInBuilding && (bldg != null)) {
                 // Only report if damage was done to the building.
                 if (damage > 0) {
-                    Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+                    Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
                     for (Report report : buildingReport) {
                         report.subject = ae.getId();
                     }
@@ -1387,14 +1387,14 @@ public class CombatManager {
             r = new Report(4040);
             r.subject = ae.getId();
             gameManager.addReport(r);
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
             gameManager.reportManager.addReport(buildingReport, gameManager);
 
             // Damage any infantry in the hex.
-            gameManager.reportManager.addReport(gameManager.damageInfantryIn(bldg, damage, target.getPosition()), gameManager);
+            gameManager.reportManager.addReport(gameManager.environmentalEffectManager.damageInfantryIn(bldg, damage, target.getPosition(), gameManager), gameManager);
 
             // And we're done!
             return;
@@ -1416,7 +1416,7 @@ public class CombatManager {
             int toBldg = Math.min(bldgAbsorbs, damage);
             damage -= toBldg;
             gameManager.addNewLines();
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
@@ -2123,7 +2123,7 @@ public class CombatManager {
             if (targetInBuilding && (bldg != null)) {
                 // Only report if damage was done to the building.
                 if (damage > 0) {
-                    Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+                    Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
                     for (Report report : buildingReport) {
                         report.subject = ae.getId();
                     }
@@ -2148,14 +2148,14 @@ public class CombatManager {
             r = new Report(4040);
             r.subject = ae.getId();
             gameManager.addReport(r);
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
             gameManager.reportManager.addReport(buildingReport, gameManager);
 
             // Damage any infantry in the hex.
-            gameManager.reportManager.addReport(gameManager.damageInfantryIn(bldg, damage, target.getPosition()), gameManager);
+            gameManager.reportManager.addReport(gameManager.environmentalEffectManager.damageInfantryIn(bldg, damage, target.getPosition(), gameManager), gameManager);
 
             if (caa.isZweihandering()) {
                 if (caa.getClub().getType().hasSubType(MiscType.S_CLUB)) {
@@ -2191,7 +2191,7 @@ public class CombatManager {
             int toBldg = Math.min(bldgAbsorbs, damage);
             damage -= toBldg;
             gameManager.addNewLines();
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
@@ -3076,14 +3076,14 @@ public class CombatManager {
             r = new Report(4040);
             r.subject = ae.getId();
             gameManager.addReport(r);
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
             gameManager.reportManager.addReport(buildingReport, gameManager);
 
             // Damage any infantry in the hex.
-            gameManager.reportManager.addReport(gameManager.damageInfantryIn(bldg, damage, target.getPosition()), gameManager);
+            gameManager.reportManager.addReport(gameManager.environmentalEffectManager.damageInfantryIn(bldg, damage, target.getPosition(), gameManager), gameManager);
 
             // Apply damage to the attacker.
             int toAttacker = ChargeAttackAction.getDamageTakenBy(ae, bldg, target.getPosition());
@@ -3092,7 +3092,7 @@ public class CombatManager {
             gameManager.reportManager.addReport(gameManager.damageEntity(ae, hit, toAttacker, false, DamageType.NONE,
                     false, false, throughFront), gameManager);
             gameManager.addNewLines();
-            gameManager.entityUpdate(ae.getId());
+            gameManager.entityActionManager.entityUpdate(ae.getId(), gameManager);
 
             // TODO : Does the attacker enter the building?
             // TODO : What if the building collapses?
@@ -3240,14 +3240,14 @@ public class CombatManager {
             r = new Report(4040);
             r.subject = ae.getId();
             gameManager.addReport(r);
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
             gameManager.reportManager.addReport(buildingReport, gameManager);
 
             // Damage any infantry in the hex.
-            gameManager.reportManager.addReport(gameManager.damageInfantryIn(bldg, damage, target.getPosition()), gameManager);
+            gameManager.reportManager.addReport(gameManager.environmentalEffectManager.damageInfantryIn(bldg, damage, target.getPosition(), gameManager), gameManager);
 
             // Apply damage to the attacker.
             int toAttacker = AirmechRamAttackAction.getDamageTakenBy(ae, target, ae.delta_distance);
@@ -3256,7 +3256,7 @@ public class CombatManager {
             gameManager.reportManager.addReport(gameManager.damageEntity(ae, hit, toAttacker, false, DamageType.NONE,
                     false, false, throughFront), gameManager);
             gameManager.addNewLines();
-            gameManager.entityUpdate(ae.getId());
+            gameManager.entityActionManager.entityUpdate(ae.getId(), gameManager);
 
             // TODO : Does the attacker enter the building?
             // TODO : What if the building collapses?
@@ -3743,7 +3743,7 @@ public class CombatManager {
                 int toBldg = Math.min(bldgAbsorbs, cluster);
                 cluster -= toBldg;
                 gameManager.addNewLines();
-                Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, te.getPosition());
+                Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, te.getPosition(), gameManager);
                 for (Report report : buildingReport) {
                     report.subject = ae.getId();
                 }
@@ -4127,7 +4127,7 @@ public class CombatManager {
                                     0, "domino effect"), gameManager));
                     // Update the violating entity's position on the client.
                     if (!gameManager.game.getOutOfGameEntitiesVector().contains(violation)) {
-                        gameManager.entityUpdate(violation.getId());
+                        gameManager.entityActionManager.entityUpdate(violation.getId(), gameManager);
                     }
                 }
             } else {
@@ -4158,14 +4158,14 @@ public class CombatManager {
             Building bldg = gameManager.game.getBoard().getBuildingAt(daa.getTargetPos());
 
             // The building takes the full brunt of the attack.
-            Vector<Report> buildingReport = gameManager.damageBuilding(bldg, damage, target.getPosition());
+            Vector<Report> buildingReport = gameManager.environmentalEffectManager.damageBuilding(bldg, damage, target.getPosition(), gameManager);
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
             gameManager.reportManager.addReport(buildingReport, gameManager);
 
             // Damage any infantry in the hex.
-            gameManager.reportManager.addReport(gameManager.damageInfantryIn(bldg, damage, target.getPosition()), gameManager);
+            gameManager.reportManager.addReport(gameManager.environmentalEffectManager.damageInfantryIn(bldg, damage, target.getPosition(), gameManager), gameManager);
         } else { // Target isn't building.
             if (glancing && (te != null)) {
                 damage = (int) (te.isConventionalInfantry() ? Math.ceil(damage / 2.0) : Math.floor(damage / 2.0));

@@ -138,9 +138,9 @@ public class GameStateManager {
                 gameManager.utilityManager.updateSpacecraftDetection(gameManager);
                 gameManager.utilityManager.detectSpacecraft(gameManager);
                 gameManager.utilityManager.resolveWhatPlayersCanSeeWhatUnits(gameManager);
-                gameManager.doAllAssaultDrops();
+                gameManager.environmentalEffectManager.doAllAssaultDrops(gameManager);
                 gameManager.utilityManager.addMovementHeat(gameManager);
-                gameManager.applyBuildingDamage();
+                gameManager.environmentalEffectManager.applyBuildingDamage(gameManager);
                 gameManager.checkForPSRFromDamage();
                 gameManager.addReport((Report) gameManager.resolvePilotingRolls()); // Skids cause damage in
                 // movement phase
@@ -179,7 +179,7 @@ public class GameStateManager {
                 gameManager.utilityManager.assignAMS(gameManager);
                 gameManager.handleAttacks();
                 gameManager.resolveScheduledNukes();
-                gameManager.applyBuildingDamage();
+                gameManager.environmentalEffectManager.applyBuildingDamage(gameManager);
                 gameManager.checkForPSRFromDamage();
                 gameManager.cleanupDestroyedNarcPods();
                 gameManager.addReport((Report) gameManager.resolvePilotingRolls());
@@ -202,7 +202,7 @@ public class GameStateManager {
             case PHYSICAL:
                 gameManager.utilityManager.resolveWhatPlayersCanSeeWhatUnits(gameManager);
                 gameManager.entityActionManager.resolvePhysicalAttacks(gameManager);
-                gameManager.applyBuildingDamage();
+                gameManager.environmentalEffectManager.applyBuildingDamage(gameManager);
                 gameManager.checkForPSRFromDamage();
                 gameManager.addReport((Report) gameManager.resolvePilotingRolls());
                 gameManager.resolveSinkVees();
@@ -261,7 +261,7 @@ public class GameStateManager {
                     int connId = player.getId();
                     gameManager.communicationManager.send(connId, gameManager.packetManager.createArtilleryPacket(player, gameManager));
                 }
-                gameManager.applyBuildingDamage();
+                gameManager.environmentalEffectManager.applyBuildingDamage(gameManager);
                 gameManager.checkForPSRFromDamage();
                 gameManager.addReport((Report) gameManager.resolvePilotingRolls());
 
@@ -536,7 +536,7 @@ public class GameStateManager {
                     }
                 }
                 // Update visibility indications if using double blind.
-                if (gameManager.doBlind()) {
+                if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
                     gameManager.updateVisibilityIndicator(null);
                 }
                 gameManager.entityActionManager.resetEntityPhase(phase, gameManager);
@@ -545,9 +545,9 @@ public class GameStateManager {
                 gameManager.playerManager.resetActivePlayersDone(gameManager);
                 gameManager.setIneligible(phase);
                 gameManager.gameStateManager.determineTurnOrder(phase, gameManager);
-                gameManager.entityAllUpdate();
+                gameManager.entityActionManager.entityAllUpdate(gameManager);
                 gameManager.reportManager.clearReports(gameManager);
-                gameManager.doTryUnstuck();
+                gameManager.entityActionManager.doTryUnstuck(gameManager);
                 break;
             case END:
                 gameManager.entityActionManager.resetEntityPhase(phase, gameManager);
@@ -555,7 +555,7 @@ public class GameStateManager {
                 gameManager.resolveHeat();
                 if (gameManager.game.getPlanetaryConditions().isSandBlowing()
                         && (gameManager.game.getPlanetaryConditions().getWindStrength() > PlanetaryConditions.WI_LIGHT_GALE)) {
-                    gameManager.reportManager.addReport(gameManager.resolveBlowingSandDamage(), gameManager);
+                    gameManager.reportManager.addReport(gameManager.environmentalEffectManager.resolveBlowingSandDamage(gameManager), gameManager);
                 }
                 gameManager.reportManager.addReport(gameManager.resolveControlRolls(), gameManager);
                 gameManager.reportManager.addReport(gameManager.checkForTraitors(), gameManager);
@@ -569,7 +569,7 @@ public class GameStateManager {
                 gameManager.game.getPlanetaryConditions().determineWind();
                 gameManager.communicationManager.send(gameManager.packetManager.createPlanetaryConditionsPacket(gameManager));
 
-                gameManager.applyBuildingDamage();
+                gameManager.environmentalEffectManager.applyBuildingDamage(gameManager);
                 gameManager.reportManager.addReport(gameManager.game.ageFlares(), gameManager);
                 gameManager.communicationManager.send(gameManager.packetManager.createFlarePacket(gameManager));
                 gameManager.resolveAmmoDumps();
@@ -578,9 +578,9 @@ public class GameStateManager {
                 gameManager.resolveSelfDestruct();
                 gameManager.resolveShutdownCrashes();
                 gameManager.checkForIndustrialEndOfTurn();
-                gameManager.resolveMechWarriorPickUp();
-                gameManager.resolveVeeINarcPodRemoval();
-                gameManager.resolveFortify();
+                gameManager.entityActionManager.resolveMechWarriorPickUp(gameManager);
+                gameManager.entityActionManager.resolveVeeINarcPodRemoval(gameManager);
+                gameManager.environmentalEffectManager.resolveFortify(gameManager);
 
                 gameManager.reportManager.entityStatusReport(gameManager);
 
@@ -596,7 +596,7 @@ public class GameStateManager {
 
                 gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.communicationManager.transmitAllPlayerUpdates(gameManager);
-                gameManager.entityAllUpdate();
+                gameManager.entityActionManager.entityAllUpdate(gameManager);
                 break;
             case INITIATIVE_REPORT: {
                 gameManager.gameStateManager.autoSave(gameManager);
@@ -609,7 +609,7 @@ public class GameStateManager {
             case END_REPORT:
                 gameManager.playerManager.resetActivePlayersDone(gameManager);
                 gameManager.communicationManager.sendReport(gameManager);
-                gameManager.entityAllUpdate();
+                gameManager.entityActionManager.entityAllUpdate(gameManager);
                 if (gameManager.game.getOptions().booleanOption(OptionsConstants.BASE_PARANOID_AUTOSAVE)) {
                     gameManager.gameStateManager.autoSave(gameManager);
                 }
@@ -1057,7 +1057,7 @@ public class GameStateManager {
             if (entity.getsAutoExternalSearchlight()) {
                 entity.setExternalSearchlight(true);
             }
-            gameManager.entityUpdate(entity.getId());
+            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
 
             // Remove hot-loading some from LRMs for meks
             if (!gameManager.game.getOptions().booleanOption(OptionsConstants.ADVCOMBAT_HOTLOAD_IN_GAME)) {

@@ -70,7 +70,7 @@ public class GeyserProcessor extends DynamicTerrainProcessor {
                         gs.remove();
                         for (Entity e : gameManager.getGame().getEntitiesVector(
                                 g.position)) {
-                            gameManager.doMagmaDamage(e, true);
+                            gameManager.environmentalEffectManager.doMagmaDamage(e, true, gameManager);
                         }
                     } else {
                         r = new Report(5280, Report.PUBLIC);

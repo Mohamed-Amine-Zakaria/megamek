@@ -67,7 +67,7 @@ public class CommunicationManager {
                 send(gameManager.packetManager.createMapSizesPacket(gameManager));
                 // Send Entities *after* the Lounge Phase Change
                 send(connId, new Packet(PacketCommand.PHASE_CHANGE, gameManager.getGame().getPhase()));
-                if (gameManager.doBlind()) {
+                if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
                     send(connId, gameManager.packetManager.createFilteredFullEntitiesPacket(player, null, gameManager));
                 } else {
                     send(connId, gameManager.packetManager.createFullEntitiesPacket(gameManager));
@@ -78,7 +78,7 @@ public class CommunicationManager {
                 send(connId, gameManager.packetManager.createAllReportsPacket(player, gameManager));
 
                 // Send entities *before* other phase changes.
-                if (gameManager.doBlind()) {
+                if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
                     send(connId, gameManager.packetManager.createFilteredFullEntitiesPacket(player, null, gameManager));
                 } else {
                     send(connId, gameManager.packetManager.createFullEntitiesPacket(gameManager));
@@ -123,7 +123,7 @@ public class CommunicationManager {
      * @param gameManager
      */
     public void sendEntities(int connId, GameManager gameManager) {
-        if (gameManager.doBlind()) {
+        if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
             send(connId, gameManager.packetManager.createFilteredFullEntitiesPacket(gameManager.game.getPlayer(connId), null, gameManager));
         } else {
             send(connId, gameManager.packetManager.createEntitiesPacket(gameManager));
@@ -359,11 +359,11 @@ public class CommunicationManager {
         entity.setDone(true);
 
         // Update visibility indications if using double blind.
-        if (gameManager.doBlind()) {
+        if (gameManager.environmentalEffectManager.doBlind(gameManager)) {
             gameManager.updateVisibilityIndicator(null);
         }
 
-        gameManager.entityUpdate(entity.getId());
+        gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
         gameManager.gameStateManager.endCurrentTurn(entity, gameManager);
     }
 
@@ -465,7 +465,7 @@ public class CommunicationManager {
                             // but it
                             // will work for now.
                             if (!entities.contains(e)) {
-                                gameManager.entityUpdate(e.getId());
+                                gameManager.entityActionManager.entityUpdate(e.getId(), gameManager);
                             }
                         }
                     }
@@ -656,7 +656,7 @@ public class CommunicationManager {
                 if (gameManager.getGame().getPhase().isLounge()) {
                     ((IBomber) fighter).setBombChoices(fs.getExtBombChoices());
                 }
-                gameManager.entityUpdate(fighter.getId());
+                gameManager.entityActionManager.entityUpdate(fighter.getId(), gameManager);
             }
         }
         if (!formerCarriers.isEmpty()) {
@@ -677,14 +677,14 @@ public class CommunicationManager {
         Entity oldEntity = gameManager.game.getEntity(entity.getId());
         if ((oldEntity != null) && (!oldEntity.getOwner().isEnemyOf(gameManager.game.getPlayer(connIndex)))) {
             gameManager.game.setEntity(entity.getId(), entity);
-            gameManager.entityUpdate(entity.getId());
+            gameManager.entityActionManager.entityUpdate(entity.getId(), gameManager);
             if (entity.isPartOfFighterSquadron()) {
                 // Update the stats of any Squadrons that the new units are part of
                 FighterSquadron squadron = (FighterSquadron) gameManager.game.getEntity(entity.getTransportId());
                 squadron.updateSkills();
                 squadron.updateWeaponGroups();
                 squadron.updateSensors();
-                gameManager.entityUpdate(squadron.getId());
+                gameManager.entityActionManager.entityUpdate(squadron.getId(), gameManager);
             }
             // In the chat lounge, notify players of customizing of unit
             if (gameManager.game.getPhase().isLounge()) {
@@ -782,7 +782,7 @@ public class CommunicationManager {
         Entity loader = gameManager.getGame().getEntity(loaderId);
 
         if ((loadee != null) && (loader != null)) {
-            gameManager.loadUnit(loader, loadee, bayNumber);
+            gameManager.entityActionManager.loadUnit(loader, loadee, bayNumber, gameManager);
             // In the chat lounge, notify players of customizing of unit
             if (gameManager.getGame().getPhase().isLounge()) {
                 ServerLobbyHelper.entityUpdateMessage(loadee, gameManager.getGame());
@@ -907,7 +907,7 @@ public class CommunicationManager {
             return;
         }
         e.setHiddenActivationPhase(phase);
-        gameManager.entityUpdate(entityId);
+        gameManager.entityActionManager.entityUpdate(entityId, gameManager);
     }
 
     /**
@@ -1145,7 +1145,7 @@ public class CommunicationManager {
                                 });
                         Entity lastUnitMember = lastUnit.next();
                         lastUnitMember.setUnitNumber(deletedUnitNum);
-                        gameManager.entityUpdate(lastUnitMember.getId());
+                        gameManager.entityActionManager.entityUpdate(lastUnitMember.getId(), gameManager);
                     } // End update-unit-number
                 } // End added-ProtoMech
 
@@ -1265,7 +1265,7 @@ public class CommunicationManager {
             for (Entity en : gameManager.game.getEntitiesVector()) {
                 en.setGameOptions();
             }
-            gameManager.entityAllUpdate();
+            gameManager.entityActionManager.entityAllUpdate(gameManager);
             return true;
         }
         return false;
@@ -1416,8 +1416,8 @@ public class CommunicationManager {
                 } else {
                     // Unload the entity. Get the unit's transporter.
                     Entity transporter = gameManager.game.getEntity(entity.getTransportId());
-                    gameManager.unloadUnit(transporter, entity, transporter.getPosition(),
-                            transporter.getFacing(), transporter.getElevation());
+                    gameManager.entityActionManager.unloadUnit(transporter, entity, transporter.getPosition(),
+                            transporter.getFacing(), transporter.getElevation(), gameManager);
                 }
             }
 

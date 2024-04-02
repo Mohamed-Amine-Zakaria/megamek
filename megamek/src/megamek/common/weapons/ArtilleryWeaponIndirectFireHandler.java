@@ -397,9 +397,9 @@ public class ArtilleryWeaponIndirectFireHandler extends AmmoWeaponHandler {
                         vPhaseReport, gameManager);
             }
         } else {
-            gameManager.artilleryDamageArea(targetPos, aaa.getCoords(), atype,
+            gameManager.environmentalEffectManager.artilleryDamageArea(targetPos, aaa.getCoords(), atype,
                     subjectId, ae, isFlak, altitude, mineClear, vPhaseReport,
-                    asfFlak, shootingBA);
+                    asfFlak, shootingBA, gameManager);
         }
 
         // artillery may unintentionally clear minefields, but only if it wasn't trying to

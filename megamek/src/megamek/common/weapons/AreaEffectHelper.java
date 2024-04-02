@@ -221,8 +221,8 @@ public class AreaEffectHelper {
 
                 checkInfantryDestruction(coords, distFromCenter, attacker, entitiesToExclude, vPhaseReport, game, gameManager);
 
-                gameManager.artilleryDamageHex(coords, center, damage, (AmmoType) ordnanceType, attacker.getId(), attacker, null, false, 0, vPhaseReport, false,
-                        entitiesToExclude, false);
+                gameManager.environmentalEffectManager.artilleryDamageHex(coords, center, damage, (AmmoType) ordnanceType, attacker.getId(), attacker, null, false, 0, vPhaseReport, false,
+                        entitiesToExclude, false, gameManager);
 
                 TargetRoll fireRoll = new TargetRoll(7, "fuel-air ordnance");
                 gameManager.environmentalEffectManager.tryIgniteHex(coords, attacker.getId(), false, false, fireRoll, true, -1, vPhaseReport, gameManager);
