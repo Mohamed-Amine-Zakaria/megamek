@@ -402,7 +402,7 @@ public class GameStateManager {
     void prepareForPhase(GamePhase phase, GameManager gameManager) {
         switch (phase) {
             case LOUNGE:
-                gameManager.clearReports();
+                gameManager.reportManager.clearReports(gameManager);
                 MapSettings mapSettings = gameManager.game.getMapSettings();
                 mapSettings.setBoardsAvailableVector(ServerBoardHelper.scanForBoards(mapSettings));
                 mapSettings.setNullBoards(GameManager.DEFAULT_BOARD);
@@ -417,7 +417,7 @@ public class GameStateManager {
                 gameManager.game.resetActions();
                 gameManager.game.resetTagInfo();
                 gameManager.communicationManager.sendTagInfoReset(gameManager);
-                gameManager.clearReports();
+                gameManager.reportManager.clearReports(gameManager);
                 gameManager.resetEntityRound();
                 gameManager.entityActionManager.resetEntityPhase(phase, gameManager);
                 gameManager.playerManager.checkForObservers(gameManager);
@@ -541,22 +541,22 @@ public class GameStateManager {
                 gameManager.setIneligible(phase);
                 gameManager.determineTurnOrder(phase);
                 gameManager.entityAllUpdate();
-                gameManager.clearReports();
+                gameManager.reportManager.clearReports(gameManager);
                 gameManager.doTryUnstuck();
                 break;
             case END:
                 gameManager.entityActionManager.resetEntityPhase(phase, gameManager);
-                gameManager.clearReports();
+                gameManager.reportManager.clearReports(gameManager);
                 gameManager.resolveHeat();
                 if (gameManager.game.getPlanetaryConditions().isSandBlowing()
                         && (gameManager.game.getPlanetaryConditions().getWindStrength() > PlanetaryConditions.WI_LIGHT_GALE)) {
-                    gameManager.addReport(gameManager.resolveBlowingSandDamage());
+                    gameManager.reportManager.addReport(gameManager.resolveBlowingSandDamage(), gameManager);
                 }
-                gameManager.addReport(gameManager.resolveControlRolls());
-                gameManager.addReport(gameManager.checkForTraitors());
+                gameManager.reportManager.addReport(gameManager.resolveControlRolls(), gameManager);
+                gameManager.reportManager.addReport(gameManager.checkForTraitors(), gameManager);
                 // write End Phase header
                 gameManager.addReport(new Report(5005, Report.PUBLIC));
-                gameManager.addReport(gameManager.resolveInternalBombHits());
+                gameManager.reportManager.addReport(gameManager.resolveInternalBombHits(), gameManager);
                 gameManager.checkLayExplosives();
                 gameManager.resolveHarJelRepairs();
                 gameManager.resolveEmergencyCoolantSystem();
@@ -565,7 +565,7 @@ public class GameStateManager {
                 gameManager.communicationManager.send(gameManager.packetManager.createPlanetaryConditionsPacket(gameManager));
 
                 gameManager.applyBuildingDamage();
-                gameManager.addReport(gameManager.game.ageFlares());
+                gameManager.reportManager.addReport(gameManager.game.ageFlares(), gameManager);
                 gameManager.communicationManager.send(gameManager.packetManager.createFlarePacket(gameManager));
                 gameManager.resolveAmmoDumps();
                 gameManager.resolveCrewWakeUp();
@@ -577,7 +577,7 @@ public class GameStateManager {
                 gameManager.resolveVeeINarcPodRemoval();
                 gameManager.resolveFortify();
 
-                gameManager.entityStatusReport();
+                gameManager.reportManager.entityStatusReport(gameManager);
 
                 // Moved this to the very end because it makes it difficult to see
                 // more important updates when you have 300+ messages of smoke filling
@@ -612,7 +612,7 @@ public class GameStateManager {
             case VICTORY:
                 gameManager.ratingManager.updatePlayersRating(gameManager);
                 gameManager.resetPlayersDone();
-                gameManager.clearReports();
+                gameManager.reportManager.clearReports(gameManager);
                 gameManager.communicationManager.send(gameManager.packetManager.createAllReportsPacket(gameManager));
                 gameManager.reportManager.prepareVictoryReport(gameManager);
                 gameManager.game.addReports(gameManager.vPhaseReport);

@@ -1,13 +1,16 @@
 package megamek.server.gameManager;
 
+import megamek.client.ui.swing.tooltip.UnitToolTip;
 import megamek.common.Entity;
 import megamek.common.IEntityRemovalConditions;
 import megamek.common.Player;
 import megamek.common.Report;
+import megamek.common.options.OptionsConstants;
+import megamek.server.UnitStatusFormatter;
+import org.apache.logging.log4j.LogManager;
 
-import java.util.Enumeration;
-import java.util.Iterator;
-import java.util.Vector;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class ReportManager {
     /**
@@ -61,7 +64,7 @@ public class ReportManager {
                     continue;
                 }
 
-                gameManager.addReport(entity.victoryReport());
+                gameManager.reportManager.addReport(entity.victoryReport(), gameManager);
             }
         }
         // List units that never deployed
@@ -81,7 +84,7 @@ public class ReportManager {
                     wroteHeader = true;
                 }
 
-                gameManager.addReport(entity.victoryReport());
+                gameManager.reportManager.addReport(entity.victoryReport(), gameManager);
             }
         }
         // List units that retreated
@@ -90,7 +93,7 @@ public class ReportManager {
             gameManager.addReport(new Report(7080, Report.PUBLIC));
             while (retreat.hasMoreElements()) {
                 Entity entity = retreat.nextElement();
-                gameManager.addReport(entity.victoryReport());
+                gameManager.reportManager.addReport(entity.victoryReport(), gameManager);
             }
         }
         // List destroyed units
@@ -99,7 +102,7 @@ public class ReportManager {
             gameManager.addReport(new Report(7085, Report.PUBLIC));
             while (graveyard.hasMoreElements()) {
                 Entity entity = graveyard.nextElement();
-                gameManager.addReport(entity.victoryReport());
+                gameManager.reportManager.addReport(entity.victoryReport(), gameManager);
             }
         }
         // List devastated units (not salvageable)
@@ -109,10 +112,151 @@ public class ReportManager {
 
             while (devastated.hasMoreElements()) {
                 Entity entity = devastated.nextElement();
-                gameManager.addReport(entity.victoryReport());
+                gameManager.reportManager.addReport(entity.victoryReport(), gameManager);
             }
         }
         // Let player know about entitystatus.txt file
         gameManager.addReport(new Report(7095, Report.PUBLIC));
+    }
+
+    /**
+     * Generates a detailed report for campaign use
+     * @param gameManager
+     */
+    protected String getDetailedVictoryReport(GameManager gameManager) {
+        StringBuilder sb = new StringBuilder();
+
+        Vector<Entity> vAllUnits = new Vector<>();
+        for (Iterator<Entity> i = gameManager.game.getEntities(); i.hasNext(); ) {
+            vAllUnits.addElement(i.next());
+        }
+
+        for (Enumeration<Entity> i = gameManager.game.getRetreatedEntities(); i.hasMoreElements(); ) {
+            vAllUnits.addElement(i.nextElement());
+        }
+
+        for (Enumeration<Entity> i = gameManager.game.getGraveyardEntities(); i.hasMoreElements(); ) {
+            vAllUnits.addElement(i.nextElement());
+        }
+
+        for (Enumeration<Player> i = gameManager.game.getPlayers(); i.hasMoreElements(); ) {
+            // Record the player.
+            Player p = i.nextElement();
+            sb.append("++++++++++ ").append(p.getName()).append(" ++++++++++\n");
+
+            // Record the player's alive, retreated, or salvageable units.
+            for (int x = 0; x < vAllUnits.size(); x++) {
+                Entity e = vAllUnits.elementAt(x);
+                if (e.getOwner() == p) {
+                    sb.append(UnitStatusFormatter.format(e));
+                }
+            }
+
+            // Record the player's devastated units.
+            Enumeration<Entity> devastated = gameManager.game.getDevastatedEntities();
+            if (devastated.hasMoreElements()) {
+                sb.append("=============================================================\n");
+                sb.append("The following utterly destroyed units are not available for salvage:\n");
+                while (devastated.hasMoreElements()) {
+                    Entity e = devastated.nextElement();
+                    if (e.getOwner() == p) {
+                        sb.append(e.getShortName());
+                        for (int pos = 0; pos < e.getCrew().getSlotCount(); pos++) {
+                            sb.append(", ").append(e.getCrew().getNameAndRole(pos)).append(" (")
+                                    .append(e.getCrew().getGunnery()).append('/')
+                                    .append(e.getCrew().getPiloting()).append(")\n");
+                        }
+                    }
+                }
+                sb.append("=============================================================\n");
+            }
+        }
+
+        return sb.toString();
+    }
+
+    protected void entityStatusReport(GameManager gameManager) {
+        if (gameManager.game.getOptions().booleanOption(OptionsConstants.BASE_SUPPRESS_UNIT_TOOLTIP_IN_REPORT_LOG)) {
+            return;
+        }
+
+        List<Report> reports = new ArrayList<>();
+        List<Entity> entities = gameManager.game.getEntitiesVector().stream()
+                .filter(e -> (e.isDeployed() && e.getPosition() != null))
+                .collect(Collectors.toList());
+        Comparator<Entity> comp = Comparator.comparing((Entity e) -> e.getOwner().getTeam());
+        comp = comp.thenComparing((Entity e) -> e.getOwner().getName());
+        comp = comp.thenComparing((Entity e) -> e.getDisplayName());
+        entities.sort(comp);
+
+        // turn off preformatted text for unit tool tip
+        Report r = new Report(1230, Report.PUBLIC);
+        r.add("</pre>");
+        reports.add(r);
+
+        r = new Report(7600);
+        reports.add(r);
+
+        for (Entity e : entities) {
+            r = new Report(1231);
+            r.subject = e.getId();
+            r.addDesc(e);
+            String etr = "";
+            try {
+                etr = UnitToolTip.getEntityTipReport(e).toString();
+            } catch (Exception ex) {
+                LogManager.getLogger().error("", ex);
+            }
+            r.add(etr);
+            reports.add(r);
+
+            r = new Report(1230, Report.PUBLIC);
+            r.add("<BR>");
+            reports.add(r);
+        }
+
+        // turn preformatted text back on, so that text after will display properly
+        r = new Report(1230, Report.PUBLIC);
+        r.add("<pre>");
+        reports.add(r);
+
+        gameManager.vPhaseReport.addAll(reports);
+    }
+
+    /**
+     * New Round has started clear everyone's report queue
+     * @param gameManager
+     */
+    void clearReports(GameManager gameManager) {
+        gameManager.vPhaseReport.removeAllElements();
+    }
+
+    public Vector<Report> getvPhaseReport(GameManager gameManager) {
+        return gameManager.vPhaseReport;
+    }
+
+    /**
+     * Add a whole lotta Reports to the players report queues as well as the
+     * Master report queue vPhaseReport.
+     * @param reports
+     * @param gameManager
+     */
+    protected void addReport(Vector<Report> reports, GameManager gameManager) {
+        gameManager.vPhaseReport.addAll(reports);
+    }
+
+    /**
+     * Add a whole lotta Reports to the players report queues as well as the
+     * Master report queue vPhaseReport, indenting each report by the passed
+     * value.
+     * @param reports
+     * @param indents
+     * @param gameManager
+     */
+    protected void addReport(Vector<Report> reports, int indents, GameManager gameManager) {
+        for (Report r : reports) {
+            r.indent(indents);
+            gameManager.vPhaseReport.add(r);
+        }
     }
 }

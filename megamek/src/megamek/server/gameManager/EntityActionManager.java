@@ -105,7 +105,7 @@ public class EntityActionManager {
                 && gameManager.game.getBoard().contains(md.getFinalCoords())
                 && (gameManager.game.getBoard().getHex(md.getFinalCoords()).terrainLevel(Terrains.SMOKE) == SmokeCloud.SMOKE_GREEN)
                 && entity.antiTSMVulnerable()) {
-            gameManager.addReport(gameManager.doGreenSmokeDamage(entity));
+            gameManager.reportManager.addReport(gameManager.doGreenSmokeDamage(entity), gameManager);
         }
 
         // This entity's turn is over.
@@ -355,7 +355,7 @@ public class EntityActionManager {
             // do searchlights immediately
             if (aaa instanceof SearchlightAttackAction) {
                 SearchlightAttackAction saa = (SearchlightAttackAction) aaa;
-                gameManager.addReport(saa.resolveAction(gameManager.game));
+                gameManager.reportManager.addReport(saa.resolveAction(gameManager.game), gameManager);
             } else {
                 gameManager.physicalResults.addElement(gameManager.preTreatPhysicalAttack(aaa));
             }
@@ -910,6 +910,6 @@ public class EntityActionManager {
         entity.setDone(true);
         entity.setDeployed(true);
         gameManager.entityUpdate(entity.getId());
-        gameManager.addReport(gameManager.doSetLocationsExposure(entity, hex, false, entity.getElevation()));
+        gameManager.reportManager.addReport(gameManager.doSetLocationsExposure(entity, hex, false, entity.getElevation()), gameManager);
     }
 }

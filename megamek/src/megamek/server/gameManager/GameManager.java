@@ -15,7 +15,6 @@ package megamek.server.gameManager;
 
 import megamek.MMConstants;
 import megamek.client.ui.swing.GUIPreferences;
-import megamek.client.ui.swing.tooltip.UnitToolTip;
 import megamek.common.*;
 import megamek.common.Building.DemolitionCharge;
 import megamek.common.actions.*;
@@ -60,7 +59,7 @@ public class GameManager implements IGameManager {
     public GameStateManager gameStateManager = new GameStateManager();
     public PlayerManager playerManager = new PlayerManager();
     protected EntityActionManager entityActionManager = new EntityActionManager();
-    protected ReportManager reportManager = new ReportManager();
+    public ReportManager reportManager = new ReportManager();
     protected UtilityManager utilityManager = new UtilityManager();
 
 
@@ -70,10 +69,6 @@ public class GameManager implements IGameManager {
     public Game game = new Game();
 
     public Vector<Report> vPhaseReport = new Vector<>();
-
-    public Vector<Report> getvPhaseReport() {
-        return vPhaseReport;
-    }
 
     // Track buildings that are affected by an entity's movement.
     protected Hashtable<Building, Boolean> affectedBldgs = new Hashtable<>();
@@ -440,61 +435,6 @@ public class GameManager implements IGameManager {
     }
 
     /**
-     * Generates a detailed report for campaign use
-     */
-    protected String getDetailedVictoryReport() {
-        StringBuilder sb = new StringBuilder();
-
-        Vector<Entity> vAllUnits = new Vector<>();
-        for (Iterator<Entity> i = game.getEntities(); i.hasNext(); ) {
-            vAllUnits.addElement(i.next());
-        }
-
-        for (Enumeration<Entity> i = game.getRetreatedEntities(); i.hasMoreElements(); ) {
-            vAllUnits.addElement(i.nextElement());
-        }
-
-        for (Enumeration<Entity> i = game.getGraveyardEntities(); i.hasMoreElements(); ) {
-            vAllUnits.addElement(i.nextElement());
-        }
-
-        for (Enumeration<Player> i = game.getPlayers(); i.hasMoreElements(); ) {
-            // Record the player.
-            Player p = i.nextElement();
-            sb.append("++++++++++ ").append(p.getName()).append(" ++++++++++\n");
-
-            // Record the player's alive, retreated, or salvageable units.
-            for (int x = 0; x < vAllUnits.size(); x++) {
-                Entity e = vAllUnits.elementAt(x);
-                if (e.getOwner() == p) {
-                    sb.append(UnitStatusFormatter.format(e));
-                }
-            }
-
-            // Record the player's devastated units.
-            Enumeration<Entity> devastated = game.getDevastatedEntities();
-            if (devastated.hasMoreElements()) {
-                sb.append("=============================================================\n");
-                sb.append("The following utterly destroyed units are not available for salvage:\n");
-                while (devastated.hasMoreElements()) {
-                    Entity e = devastated.nextElement();
-                    if (e.getOwner() == p) {
-                        sb.append(e.getShortName());
-                        for (int pos = 0; pos < e.getCrew().getSlotCount(); pos++) {
-                            sb.append(", ").append(e.getCrew().getNameAndRole(pos)).append(" (")
-                                    .append(e.getCrew().getGunnery()).append('/')
-                                    .append(e.getCrew().getPiloting()).append(")\n");
-                        }
-                    }
-                }
-                sb.append("=============================================================\n");
-            }
-        }
-
-        return sb.toString();
-    }
-
-    /**
      * Forces victory for the specified player, or his/her team at the end of the round.
      */
     public void forceVictory(Player victor) {
@@ -532,7 +472,7 @@ public class GameManager implements IGameManager {
             game.rollInitAndResolveTies();
 
             determineTurnOrder(GamePhase.INITIATIVE);
-            clearReports();
+            reportManager.clearReports(this);
             writeInitiativeReport(true);
             communicationManager.sendReport(true, this);
             return; // don't end the phase yet, players need to see new report
@@ -740,54 +680,6 @@ public class GameManager implements IGameManager {
         }
     }
 
-
-    protected void entityStatusReport() {
-        if (game.getOptions().booleanOption(OptionsConstants.BASE_SUPPRESS_UNIT_TOOLTIP_IN_REPORT_LOG)) {
-            return;
-        }
-
-        List<Report> reports = new ArrayList<>();
-        List<Entity> entities = game.getEntitiesVector().stream()
-                .filter(e -> (e.isDeployed() && e.getPosition() != null))
-                .collect(Collectors.toList());
-        Comparator<Entity> comp = Comparator.comparing((Entity e) -> e.getOwner().getTeam());
-        comp = comp.thenComparing((Entity e) -> e.getOwner().getName());
-        comp = comp.thenComparing((Entity e) -> e.getDisplayName());
-        entities.sort(comp);
-
-        // turn off preformatted text for unit tool tip
-        Report r = new Report(1230, Report.PUBLIC);
-        r.add("</pre>");
-        reports.add(r);
-
-        r = new Report(7600);
-        reports.add(r);
-
-        for (Entity e : entities) {
-            r = new Report(1231);
-            r.subject = e.getId();
-            r.addDesc(e);
-            String etr = "";
-            try {
-                etr = UnitToolTip.getEntityTipReport(e).toString();
-            } catch (Exception ex) {
-                LogManager.getLogger().error("", ex);
-            }
-            r.add(etr);
-            reports.add(r);
-
-            r = new Report(1230, Report.PUBLIC);
-            r.add("<BR>");
-            reports.add(r);
-        }
-
-        // turn preformatted text back on, so that text after will display properly
-        r = new Report(1230, Report.PUBLIC);
-        r.add("<pre>");
-        reports.add(r);
-
-        vPhaseReport.addAll(reports);
-    }
 
     /**
      * Calculates the initial count and BV for all players, and thus should only be called at the
@@ -1740,7 +1632,7 @@ public class GameManager implements IGameManager {
         Hashtable<Coords, Vector<Entity>> positionMap = game.getPositionMap();
         for (Entity en : game.getEntitiesVector(centralPos)) {
             if (!en.isAirborne()) {
-                addReport(destroyEntity(en, "DropShip proximity damage", false, false));
+                reportManager.addReport(destroyEntity(en, "DropShip proximity damage", false, false), this);
                 alreadyHit.add(en.getId());
             }
         }
@@ -1752,7 +1644,7 @@ public class GameManager implements IGameManager {
             Coords pos = centralPos.translated(i);
             for (Entity en : game.getEntitiesVector(pos)) {
                 if (!en.isAirborne()) {
-                    addReport(destroyEntity(en, "DropShip proximity damage", false, false));
+                    reportManager.addReport(destroyEntity(en, "DropShip proximity damage", false, false), this);
                 }
                 alreadyHit.add(en.getId());
             }
@@ -2118,7 +2010,7 @@ public class GameManager implements IGameManager {
 
                     HitData hit = unit.rollHitLocation(ToHitData.HIT_NORMAL, ToHitData.SIDE_FRONT);
                     hit.setIgnoreInfantryDoubleDamage(true);
-                    addReport(damageEntity(unit, hit, 5));
+                    reportManager.addReport(damageEntity(unit, hit, 5), this);
                 } else { //  Report success
                     r = new Report(9922);
                     r.subject = unit.getId();
@@ -2132,7 +2024,7 @@ public class GameManager implements IGameManager {
             }
         }
 
-        addReport(doSetLocationsExposure(unit, hex, false, unit.getElevation()));
+        reportManager.addReport(doSetLocationsExposure(unit, hex, false, unit.getElevation()), this);
 
         // unlike other unloaders, entities unloaded from droppers can still
         // move (unless infantry)
@@ -2213,7 +2105,7 @@ public class GameManager implements IGameManager {
             }
             while (damage > 0) {
                 HitData hit = entity.rollHitLocation(ToHitData.HIT_NORMAL, side);
-                addReport(damageEntity(entity, hit, 10));
+                reportManager.addReport(damageEntity(entity, hit, 10), this);
                 damage -= 10;
             }
             // suc = false;
@@ -2253,7 +2145,7 @@ public class GameManager implements IGameManager {
                 r.subject(((Entity) aero).getId());
                 r.addDesc((Entity) aero);
                 addReport(r);
-                addReport(destroyEntity((Entity) aero, "landing in deep water"));
+                reportManager.addReport(destroyEntity((Entity) aero, "landing in deep water"), this);
             }
         }
     }
@@ -2337,7 +2229,7 @@ public class GameManager implements IGameManager {
                 Vector<Report> rep = damageEntity(unit, hit, damage);
                 Report.indentAll(rep, 1);
                 rep.lastElement().newlines++;
-                addReport(rep);
+                reportManager.addReport(rep, this);
                 // did we destroy the unit?
                 if (unit.isDoomed()) {
                     // Clean out the entity.
@@ -2374,7 +2266,7 @@ public class GameManager implements IGameManager {
             r.addDataWithTooltip(rollCalc, diceRoll.getReport());
             addReport(r);
             HitData hit = unit.rollHitLocation(ToHitData.HIT_NORMAL, ToHitData.SIDE_FRONT);
-            addReport(damageEntity(unit, hit, damage));
+            reportManager.addReport(damageEntity(unit, hit, damage), this);
             // did we destroy the unit?
             if (unit.isDoomed()) {
                 // Clean out the entity.
@@ -2849,15 +2741,15 @@ public class GameManager implements IGameManager {
                     }
                     elevation = nextElevation;
                     if (entity instanceof Tank) {
-                        addReport(crashVTOLorWiGE((Tank) entity, false, true,
-                                distance, curPos, elevation, table));
+                        reportManager.addReport(crashVTOLorWiGE((Tank) entity, false, true,
+                                distance, curPos, elevation, table), this);
                     }
 
                     if ((nextHex.containsTerrain(Terrains.WATER) && !nextHex
                             .containsTerrain(Terrains.ICE))
                             || nextHex.containsTerrain(Terrains.WOODS)
                             || nextHex.containsTerrain(Terrains.JUNGLE)) {
-                        addReport(destroyEntity(entity, "could not land in crash site"));
+                        reportManager.addReport(destroyEntity(entity, "could not land in crash site"), this);
                     } else if (elevation < nextHex.terrainLevel(Terrains.BLDG_ELEV)) {
                         Building bldg = game.getBoard().getBuildingAt(nextPos);
 
@@ -2865,20 +2757,20 @@ public class GameManager implements IGameManager {
                         // before the wall not in the wall
                         // Like a building.
                         if (bldg.getType() == Building.WALL) {
-                            addReport(destroyEntity(entity, "crashed into a wall"));
+                            reportManager.addReport(destroyEntity(entity, "crashed into a wall"), this);
                             break;
                         }
                         if (bldg.getBldgClass() == Building.GUN_EMPLACEMENT) {
-                            addReport(destroyEntity(entity, "crashed into a gun emplacement"));
+                            reportManager.addReport(destroyEntity(entity, "crashed into a gun emplacement"), this);
                             break;
                         }
 
-                        addReport(destroyEntity(entity, "crashed into building"));
+                        reportManager.addReport(destroyEntity(entity, "crashed into building"), this);
                     } else {
                         entity.setPosition(nextPos);
                         entity.setElevation(0);
-                        addReport(doEntityDisplacementMinefieldCheck(entity,
-                                curPos, nextPos, nextElevation));
+                        reportManager.addReport(doEntityDisplacementMinefieldCheck(entity,
+                                curPos, nextPos, nextElevation), this);
                     }
                     break;
 
@@ -2894,7 +2786,7 @@ public class GameManager implements IGameManager {
                     }
                     HitData hitData = entity.rollHitLocation(table, side);
                     hitData.setGeneralDamageType(HitData.DAMAGE_PHYSICAL);
-                    addReport(damageEntity(entity, hitData, Math.min(5, damage)));
+                    reportManager.addReport(damageEntity(entity, hitData, Math.min(5, damage)), this);
                     damage -= 5;
                 }
                 // Stay in the current hex and stop skidding.
@@ -2940,8 +2832,8 @@ public class GameManager implements IGameManager {
                             break;
                     }
                     elevation = nextElevation;
-                    addReport(crashVTOLorWiGE((VTOL) entity, false, true,
-                            distance, curPos, elevation, table));
+                    reportManager.addReport(crashVTOLorWiGE((VTOL) entity, false, true,
+                            distance, curPos, elevation, table), this);
                     break;
                 }
                 if (!crashDropShip.isDoomed() && !crashDropShip.isDestroyed()
@@ -2954,9 +2846,9 @@ public class GameManager implements IGameManager {
             else if ( (curAltitude > (nextAltitude + entity.getMaxElevationChange())
                     || (curHex.hasCliffTopTowards(nextHex) && curAltitude > nextAltitude) )
                     && !(entity.getMovementMode() == EntityMovementMode.WIGE && elevation > curHex.ceiling())) {
-                addReport(doEntityFallsInto(entity, entity.getElevation(), curPos, nextPos,
-                        entity.getBasePilotingRoll(moveType), true));
-                addReport(doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, nextElevation));
+                reportManager.addReport(doEntityFallsInto(entity, entity.getElevation(), curPos, nextPos,
+                        entity.getBasePilotingRoll(moveType), true), this);
+                reportManager.addReport(doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, nextElevation), this);
                 // Stay in the current hex and stop skidding.
                 break;
             }
@@ -3107,7 +2999,7 @@ public class GameManager implements IGameManager {
                         // as if it still had his leg after
                         // getting skid-charged.
                         if (!target.isDone()) {
-                            addReport(resolvePilotingRolls(target));
+                            reportManager.addReport(resolvePilotingRolls(target), this);
                             game.resetPSRs(target);
                             target.applyDamage();
                             addNewLines();
@@ -3136,7 +3028,7 @@ public class GameManager implements IGameManager {
                         hit.setGeneralDamageType(HitData.DAMAGE_PHYSICAL);
                         // Damage equals tonnage, divided by 5.
                         // ASSUMPTION: damage is applied in one hit.
-                        addReport(damageEntity(target, hit, (int) Math.round(entity.getWeight() / 5)));
+                        reportManager.addReport(damageEntity(target, hit, (int) Math.round(entity.getWeight() / 5)), this);
                         addNewLines();
                     }
 
@@ -3199,18 +3091,18 @@ public class GameManager implements IGameManager {
                     for (Report report : reports) {
                         report.subject = entity.getId();
                     }
-                    addReport(reports);
+                    reportManager.addReport(reports, this);
 
                     // Apply damage to the attacker.
                     int toAttacker = ChargeAttackAction.getDamageTakenBy(entity, bldg, nextPos);
                     HitData hit = entity.rollHitLocation(ToHitData.HIT_NORMAL, entity.sideTable(nextPos));
                     hit.setGeneralDamageType(HitData.DAMAGE_PHYSICAL);
-                    addReport(damageEntity(entity, hit, toAttacker));
+                    reportManager.addReport(damageEntity(entity, hit, toAttacker), this);
                     addNewLines();
 
                     entity.setPosition(nextPos);
                     entity.setElevation(nextElevation);
-                    addReport(doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, nextElevation));
+                    reportManager.addReport(doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, nextElevation), this);
                     curPos = nextPos;
                 } // End buildings-suffer-too
 
@@ -3219,7 +3111,7 @@ public class GameManager implements IGameManager {
                 // ASSUMPTION: infantry take no damage from the
                 // building absorbing damage from
                 // Tanks and Mechs being charged.
-                addReport(damageInfantryIn(bldg, chargeDamage, nextPos));
+                reportManager.addReport(damageInfantryIn(bldg, chargeDamage, nextPos), this);
 
                 // If a building still stands, then end the skid,
                 // and add it to the list of affected buildings.
@@ -3246,7 +3138,7 @@ public class GameManager implements IGameManager {
             // Update entity position and elevation
             entity.setPosition(nextPos);
             entity.setElevation(nextElevation);
-            addReport(doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, nextElevation));
+            reportManager.addReport(doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, nextElevation), this);
             skidDistance++;
 
             // Check for collapse of any building the entity might be on
@@ -3273,16 +3165,16 @@ public class GameManager implements IGameManager {
                         && (entity instanceof Tank)
                         && (entity.getMovementMode() != EntityMovementMode.HOVER)
                         && (entity.getMovementMode() != EntityMovementMode.WIGE)) {
-                    addReport(destroyEntity(entity,
-                            "skidded into a watery grave", false, true));
+                    reportManager.addReport(destroyEntity(entity,
+                            "skidded into a watery grave", false, true), this);
                 }
 
                 // otherwise, damage is weight/5 in 5pt clusters
                 int damage = ((int) entity.getWeight() + 4) / 5;
                 while (damage > 0) {
-                    addReport(damageEntity(entity, entity.rollHitLocation(
+                    reportManager.addReport(damageEntity(entity, entity.rollHitLocation(
                                     ToHitData.HIT_NORMAL, ToHitData.SIDE_FRONT),
-                            Math.min(5, damage)));
+                            Math.min(5, damage)), this);
                     damage -= 5;
                 }
                 // and unit is immobile
@@ -3322,15 +3214,15 @@ public class GameManager implements IGameManager {
                 r.add(entity.getDisplayName(), true);
                 addReport(r);
                 // check for quicksand
-                addReport(checkQuickSand(nextPos));
+                reportManager.addReport(checkQuickSand(nextPos), this);
                 // check for accidental stacking violation
                 Entity violation = Compute.stackingViolation(game, entity.getId(), curPos, entity.climbMode());
                 if (violation != null) {
                     // target gets displaced, because of low elevation
                     Coords targetDest = Compute.getValidDisplacement(game, entity.getId(), curPos,
                             direction);
-                    addReport(doEntityDisplacement(violation, curPos, targetDest,
-                            new PilotingRollData(violation.getId(), 0, "domino effect")));
+                    reportManager.addReport(doEntityDisplacement(violation, curPos, targetDest,
+                            new PilotingRollData(violation.getId(), 0, "domino effect")), this);
                     // Update the violating entity's position on the client.
                     entityUpdate(violation.getId());
                 }
@@ -3378,8 +3270,8 @@ public class GameManager implements IGameManager {
             r.indent();
             r.newlines = 0;
             addReport(r);
-            addReport(doEntityDisplacement(target, curPos, nextPos, null));
-            addReport(doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, entity.getElevation()));
+            reportManager.addReport(doEntityDisplacement(target, curPos, nextPos, null), this);
+            reportManager.addReport(doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, entity.getElevation()), this);
             target = Compute.stackingViolation(game, entity.getId(), curPos, entity.climbMode());
         }
 
@@ -3409,19 +3301,19 @@ public class GameManager implements IGameManager {
                 int cluster = Math.min(5, damage);
                 HitData hit = entity.rollHitLocation(ToHitData.HIT_NORMAL, ToHitData.SIDE_FRONT);
                 hit.setGeneralDamageType(HitData.DAMAGE_PHYSICAL);
-                addReport(damageEntity(entity, hit, cluster));
+                reportManager.addReport(damageEntity(entity, hit, cluster), this);
                 damage -= cluster;
             }
             addNewLines();
         }
 
         if (flip && entity instanceof Tank) {
-            addReport(applyCriticalHit(entity, Entity.NONE, new CriticalSlot(0, Tank.CRIT_CREW_STUNNED),
-                    true, 0, false));
+            reportManager.addReport(applyCriticalHit(entity, Entity.NONE, new CriticalSlot(0, Tank.CRIT_CREW_STUNNED),
+                    true, 0, false), this);
         } else if (flip && entity instanceof QuadVee && entity.getConversionMode() == QuadVee.CONV_MODE_VEHICLE) {
             // QuadVees don't suffer stunned crew criticals; require PSR to avoid damage instead.
             PilotingRollData prd = entity.getBasePilotingRoll();
-            addReport(checkPilotAvoidFallDamage(entity, 1, prd));
+            reportManager.addReport(checkPilotAvoidFallDamage(entity, 1, prd), this);
         }
 
         // Clean up the entity if it has been destroyed.
@@ -3558,11 +3450,11 @@ public class GameManager implements IGameManager {
         entity.setFacing((entity.getFacing() + turnDirection + 6) % 6);
         entity.setSecondaryFacing(entity.getFacing());
         if (motiveDamage && isGroundVehicle) {
-            addReport(vehicleMotiveDamage((Tank) entity, motiveDamageMod));
+            reportManager.addReport(vehicleMotiveDamage((Tank) entity, motiveDamageMod), this);
         }
         if (skid && !entity.isDoomed()) {
             if (!flip && isGroundVehicle) {
-                addReport(vehicleMotiveDamage((Tank) entity, 0));
+                reportManager.addReport(vehicleMotiveDamage((Tank) entity, 0), this);
             }
 
             int skidDistance = (int) Math.round((double) (distance - 1) / 2);
@@ -3612,15 +3504,15 @@ public class GameManager implements IGameManager {
         }
         if (hit != null) {
             hit.setGeneralDamageType(HitData.DAMAGE_PHYSICAL);
-            addReport(damageEntity(entity, hit, damage));
+            reportManager.addReport(damageEntity(entity, hit, damage), this);
             // If the vehicle has two turrets, they both take full damage.
             if ((hit.getLocation() == Tank.LOC_TURRET) && !(entity.hasNoDualTurret())) {
                 hit = new HitData(Tank.LOC_TURRET_2);
                 hit.setGeneralDamageType(HitData.DAMAGE_PHYSICAL);
-                addReport(damageEntity(entity, hit, damage));
+                reportManager.addReport(damageEntity(entity, hit, damage), this);
             }
         } else {
-            addReport(vehicleMotiveDamage(entity, 1));
+            reportManager.addReport(vehicleMotiveDamage(entity, 1), this);
         }
     }
 
@@ -3931,8 +3823,8 @@ public class GameManager implements IGameManager {
                                 new PilotingRollData(victim.getId(), 0, "crash"));
                     } else if (!(victim instanceof Dropship)) {
                         // destroy entity - but not DropShips which are immovable
-                        addReport(destroyEntity(victim, "impossible displacement",
-                                victim instanceof Mech, victim instanceof Mech));
+                        reportManager.addReport(destroyEntity(victim, "impossible displacement",
+                                victim instanceof Mech, victim instanceof Mech), this);
                     }
                 }
 
@@ -4193,7 +4085,7 @@ public class GameManager implements IGameManager {
 
         // check for fleeing
         if (md.contains(MovePath.MoveStepType.FLEE)) {
-            addReport(processLeaveMap(md, false, -1));
+            reportManager.addReport(processLeaveMap(md, false, -1), this);
             return;
         }
 
@@ -4215,7 +4107,7 @@ public class GameManager implements IGameManager {
                         legalPos = step.getTargetPosition();
                     }
                 }
-                addReport(ejectSpacecraft(ship, ship.isSpaceborne(), (ship.isAirborne() && !ship.isSpaceborne()), legalPos));
+                reportManager.addReport(ejectSpacecraft(ship, ship.isSpaceborne(), (ship.isAirborne() && !ship.isSpaceborne()), legalPos), this);
                 //If we're grounded or destroyed by crew loss, end movement
                 if (entity.isDoomed() || (!entity.isSpaceborne() && !entity.isAirborne())) {
                     return;
@@ -4226,14 +4118,14 @@ public class GameManager implements IGameManager {
                 r.add(entity.getCrew().getName());
                 r.addDesc(entity);
                 addReport(r);
-                addReport(ejectEntity(entity, false));
+                reportManager.addReport(ejectEntity(entity, false), this);
                 return;
             } else if ((entity instanceof Tank) && !entity.isCarcass()) {
                 r = new Report(2025);
                 r.subject = entity.getId();
                 r.addDesc(entity);
                 addReport(r);
-                addReport(ejectEntity(entity, false));
+                reportManager.addReport(ejectEntity(entity, false), this);
                 return;
             }
         }
@@ -4539,11 +4431,11 @@ public class GameManager implements IGameManager {
                     // If this is the first step, use the Entity's starting elevation
                     int elevation = (prevStep == null) ? entity.getElevation() : prevStep.getElevation();
                     if (entity instanceof LandAirMech) {
-                        addReport(landAirMech((LandAirMech) entity, step.getPosition(), elevation,
-                                distance));
+                        reportManager.addReport(landAirMech((LandAirMech) entity, step.getPosition(), elevation,
+                                distance), this);
                     } else if (entity instanceof Protomech) {
-                        addReport(landGliderPM((Protomech) entity, step.getPosition(), elevation,
-                                distance));
+                        reportManager.addReport(landGliderPM((Protomech) entity, step.getPosition(), elevation,
+                                distance), this);
                     }
                     // landing always ends movement whether successful or not
                 }
@@ -4641,19 +4533,19 @@ public class GameManager implements IGameManager {
                 if (entity instanceof QuadVee && entity.getConversionMode() == QuadVee.CONV_MODE_MECH
                         && !entity.isOmni()) {
                     for (Entity rider : entity.getExternalUnits()) {
-                        addReport(checkDropBAFromConverting(entity, rider, curPos, curFacing,
-                                false, false, false));
+                        reportManager.addReport(checkDropBAFromConverting(entity, rider, curPos, curFacing,
+                                false, false, false), this);
                     }
                 } else if ((entity.getEntityType() & Entity.ETYPE_LAND_AIR_MECH) != 0) {
                     //External units on LAMs, including swarmers, fall automatically and take damage,
                     // and the LAM itself may take one or more criticals.
                     for (Entity rider : entity.getExternalUnits()) {
-                        addReport(checkDropBAFromConverting(entity, rider, curPos, curFacing, true, true, true));
+                        reportManager.addReport(checkDropBAFromConverting(entity, rider, curPos, curFacing, true, true, true), this);
                     }
                     final int swarmerId = entity.getSwarmAttackerId();
                     if (Entity.NONE != swarmerId) {
-                        addReport(checkDropBAFromConverting(entity, game.getEntity(swarmerId),
-                                curPos, curFacing, true, true, true));
+                        reportManager.addReport(checkDropBAFromConverting(entity, game.getEntity(swarmerId),
+                                curPos, curFacing, true, true, true), this);
                     }
                 }
 
@@ -4690,7 +4582,7 @@ public class GameManager implements IGameManager {
                         if (!doSkillCheckInSpace(entity, rollTarget)) {
                             a.setSI(a.getSI() - 1);
                             if (entity instanceof LandAirMech) {
-                                addReport(criticalEntity(entity, Mech.LOC_CT, false, 0, 1));
+                                reportManager.addReport(criticalEntity(entity, Mech.LOC_CT, false, 0, 1), this);
                             }
                             // check for destruction
                             if (a.getSI() == 0) {
@@ -4702,7 +4594,7 @@ public class GameManager implements IGameManager {
                                             && (!game.getOptions().booleanOption(OptionsConstants.RPG_CONDITIONAL_EJECTION)
                                             || (game.getOptions().booleanOption(OptionsConstants.RPG_CONDITIONAL_EJECTION)
                                             && lam.isCondEjectCTDest()))) {
-                                        addReport(ejectEntity(entity, true, false));
+                                        reportManager.addReport(ejectEntity(entity, true, false), this);
                                     }
                                 } else {
                                     // Aeros eject if the SI Destroyed switch is on
@@ -4711,11 +4603,11 @@ public class GameManager implements IGameManager {
                                             && (!game.getOptions().booleanOption(OptionsConstants.RPG_CONDITIONAL_EJECTION)
                                             || (game.getOptions().booleanOption(OptionsConstants.RPG_CONDITIONAL_EJECTION)
                                             && aero.isCondEjectSIDest()))) {
-                                        addReport(ejectEntity(entity, true, false));
+                                        reportManager.addReport(ejectEntity(entity, true, false), this);
                                     }
                                 }
-                                addReport(destroyEntity(entity, "Structural Integrity Collapse",
-                                        false));
+                                reportManager.addReport(destroyEntity(entity, "Structural Integrity Collapse",
+                                        false), this);
                             }
                         }
                     }
@@ -4777,7 +4669,7 @@ public class GameManager implements IGameManager {
                                 return;
                                 // make sure it didn't crash
                             } else if (checkCrash(entity, curPos, step.getAltitude())) {
-                                addReport(processCrash(entity, step.getVelocity(), curPos));
+                                reportManager.addReport(processCrash(entity, step.getVelocity(), curPos), this);
                                 forward = 0;
                                 fellDuringMovement = false;
                                 crashedDuringMovement = true;
@@ -4899,7 +4791,7 @@ public class GameManager implements IGameManager {
 
                 // if in the atmosphere, check for a potential crash
                 if (checkCrash(entity, step.getPosition(), step.getAltitude())) {
-                    addReport(processCrash(entity, md.getFinalVelocity(), curPos));
+                    reportManager.addReport(processCrash(entity, md.getFinalVelocity(), curPos), this);
                     crashedDuringMovement = true;
                     // don't do the rest
                     break;
@@ -5481,19 +5373,19 @@ public class GameManager implements IGameManager {
                     if (0 < doSkillCheckWhileMoving(entity, lastElevation,
                             lastPos, curPos, rollTarget, false)) {
                         // do leg damage
-                        addReport(damageEntity(entity, new HitData(Mech.LOC_LLEG), leapDistance));
-                        addReport(damageEntity(entity, new HitData(Mech.LOC_RLEG), leapDistance));
+                        reportManager.addReport(damageEntity(entity, new HitData(Mech.LOC_LLEG), leapDistance), this);
+                        reportManager.addReport(damageEntity(entity, new HitData(Mech.LOC_RLEG), leapDistance), this);
                         addNewLines();
-                        addReport(criticalEntity(entity, Mech.LOC_LLEG, false, 0, 0));
+                        reportManager.addReport(criticalEntity(entity, Mech.LOC_LLEG, false, 0, 0), this);
                         addNewLines();
-                        addReport(criticalEntity(entity, Mech.LOC_RLEG, false, 0, 0));
+                        reportManager.addReport(criticalEntity(entity, Mech.LOC_RLEG, false, 0, 0), this);
                         if (entity instanceof QuadMech) {
-                            addReport(damageEntity(entity, new HitData(Mech.LOC_LARM), leapDistance));
-                            addReport(damageEntity(entity, new HitData(Mech.LOC_RARM), leapDistance));
+                            reportManager.addReport(damageEntity(entity, new HitData(Mech.LOC_LARM), leapDistance), this);
+                            reportManager.addReport(damageEntity(entity, new HitData(Mech.LOC_RARM), leapDistance), this);
                             addNewLines();
-                            addReport(criticalEntity(entity, Mech.LOC_LARM, false, 0, 0));
+                            reportManager.addReport(criticalEntity(entity, Mech.LOC_LARM, false, 0, 0), this);
                             addNewLines();
-                            addReport(criticalEntity(entity, Mech.LOC_RARM, false, 0, 0));
+                            reportManager.addReport(criticalEntity(entity, Mech.LOC_RARM, false, 0, 0), this);
                         }
                     }
                     // skill check for fall
@@ -5504,9 +5396,9 @@ public class GameManager implements IGameManager {
                     if (0 < doSkillCheckWhileMoving(entity, lastElevation,
                             lastPos, curPos, rollTarget, false)) {
                         entity.setElevation(lastElevation);
-                        addReport(doEntityFallsInto(entity, lastElevation,
+                        reportManager.addReport(doEntityFallsInto(entity, lastElevation,
                                 lastPos, curPos,
-                                entity.getBasePilotingRoll(overallMoveType), false));
+                                entity.getBasePilotingRoll(overallMoveType), false), this);
                     }
                 }
             }
@@ -5534,7 +5426,7 @@ public class GameManager implements IGameManager {
                 if (psrFailed) {
 
                     if (entity instanceof Tank) {
-                        addReport(vehicleMotiveDamage((Tank) entity, 0));
+                        reportManager.addReport(vehicleMotiveDamage((Tank) entity, 0), this);
                     }
 
                     curPos = lastPos;
@@ -5695,8 +5587,8 @@ public class GameManager implements IGameManager {
                         // entity is both giver and taker
                         // for charge damage
                         HitData hit = entity.rollHitLocation(ToHitData.HIT_NORMAL, ToHitData.SIDE_FRONT);
-                        addReport(damageEntity(entity, hit, ChargeAttackAction
-                                .getDamageTakenBy(entity, entity)));
+                        reportManager.addReport(damageEntity(entity, hit, ChargeAttackAction
+                                .getDamageTakenBy(entity, entity)), this);
                         turnOver = true;
                         break;
                     }
@@ -5752,7 +5644,7 @@ public class GameManager implements IGameManager {
                     r.subject = entity.getId();
                     addReport(r);
                     // check for quicksand
-                    addReport(checkQuickSand(curPos));
+                    reportManager.addReport(checkQuickSand(curPos), this);
                     // check for accidental stacking violation
                     Entity violation = Compute.stackingViolation(game,
                             entity.getId(), curPos, entity.climbMode());
@@ -5761,10 +5653,10 @@ public class GameManager implements IGameManager {
                         int direction = lastPos.direction(curPos);
                         Coords targetDest = Compute.getValidDisplacement(game,
                                 entity.getId(), curPos, direction);
-                        addReport(doEntityDisplacement(violation, curPos,
+                        reportManager.addReport(doEntityDisplacement(violation, curPos,
                                 targetDest,
                                 new PilotingRollData(violation.getId(), 0,
-                                        "domino effect")));
+                                        "domino effect")), this);
                         // Update the violating entity's position on the client.
                         entityUpdate(violation.getId());
                     }
@@ -5828,7 +5720,7 @@ public class GameManager implements IGameManager {
 
             if ((game.getBoard().getHex(curPos).terrainLevel(Terrains.SMOKE) == SmokeCloud.SMOKE_GREEN)
                     && !stepMoveType.equals(EntityMovementType.MOVE_JUMP) && entity.antiTSMVulnerable()) {
-                addReport(doGreenSmokeDamage(entity));
+                reportManager.addReport(doGreenSmokeDamage(entity), this);
             }
 
             // check for extreme gravity movement
@@ -5870,7 +5762,7 @@ public class GameManager implements IGameManager {
                         // resolve any piloting rolls from damage unless unit
                         // was jumping
                         if (stepMoveType != EntityMovementType.MOVE_JUMP) {
-                            addReport(resolvePilotingRolls(entity));
+                            reportManager.addReport(resolvePilotingRolls(entity), this);
                             game.resetPSRs(entity);
                         }
                         boom = true;
@@ -5959,9 +5851,9 @@ public class GameManager implements IGameManager {
             // check during movement, for breach damage, and always
             // set dry if appropriate
             // TODO : possibly make the locations local and set later
-            addReport(doSetLocationsExposure(entity, curHex,
+            reportManager.addReport(doSetLocationsExposure(entity, curHex,
                     stepMoveType == EntityMovementType.MOVE_JUMP,
-                    step.getElevation()));
+                    step.getElevation()), this);
 
             // check for breaking ice by breaking through from below
             if ((lastElevation < 0) && (step.getElevation() == 0)
@@ -5975,7 +5867,7 @@ public class GameManager implements IGameManager {
                 r = new Report(2410);
                 r.addDesc(entity);
                 addReport(r);
-                addReport(resolveIceBroken(lastPos));
+                reportManager.addReport(resolveIceBroken(lastPos), this);
                 // ok now set back
                 entity.setPosition(lastPos);
             }
@@ -5995,7 +5887,7 @@ public class GameManager implements IGameManager {
 
                     if (diceRoll.getIntValue() == 6) {
                         entity.setPosition(curPos);
-                        addReport(resolveIceBroken(curPos));
+                        reportManager.addReport(resolveIceBroken(curPos), this);
                         curPos = entity.getPosition();
                     }
                 }
@@ -6004,7 +5896,7 @@ public class GameManager implements IGameManager {
                     r = new Report(2410);
                     r.addDesc(entity);
                     addReport(r);
-                    addReport(resolveIceBroken(curPos));
+                    reportManager.addReport(resolveIceBroken(curPos), this);
                 }
             }
 
@@ -6160,7 +6052,7 @@ public class GameManager implements IGameManager {
                     addReport(r);
                     // damage unit
                     HitData hit = entity.rollHitLocation(ToHitData.HIT_NORMAL, ToHitData.SIDE_FRONT);
-                    addReport(damageEntity(entity, hit, 2 * (rollTarget.getValue() - diceRoll.getIntValue())));
+                    reportManager.addReport(damageEntity(entity, hit, 2 * (rollTarget.getValue() - diceRoll.getIntValue())), this);
                 } else {
                     r.choose(true);
                     addReport(r);
@@ -6313,7 +6205,7 @@ public class GameManager implements IGameManager {
                     for (Report report : vBuildingReport) {
                         report.subject = entity.getId();
                     }
-                    addReport(vBuildingReport);
+                    reportManager.addReport(vBuildingReport, this);
                 }
 
                 boolean collapsed = false;
@@ -6406,7 +6298,7 @@ public class GameManager implements IGameManager {
                 rollTarget.append(new PilotingRollData(entity.getId(), 0, "moving down a sheer cliff"));
                 if (doSkillCheckWhileMoving(entity, lastElevation,
                         lastPos, curPos, rollTarget, false) > 0) {
-                    addReport(vehicleMotiveDamage((Tank) entity, 0));
+                    reportManager.addReport(vehicleMotiveDamage((Tank) entity, 0), this);
                     addNewLines();
                     turnOver = true;
                     break;
@@ -6596,7 +6488,7 @@ public class GameManager implements IGameManager {
             } else {
                 r.choose(false);
                 addReport(r);
-                addReport(damageCrew(entity, 1));
+                reportManager.addReport(damageCrew(entity, 1), this);
             }
         }
 
@@ -6694,7 +6586,7 @@ public class GameManager implements IGameManager {
                     entity.setAltitude(entity.getAltitude() - 1);
                     // check for crash
                     if (checkCrash(entity, entity.getPosition(), entity.getAltitude())) {
-                        addReport(processCrash(entity, 0, entity.getPosition()));
+                        reportManager.addReport(processCrash(entity, 0, entity.getPosition()), this);
                     }
                 }
 
@@ -6708,7 +6600,7 @@ public class GameManager implements IGameManager {
                     entity.setAltitude(entity.getAltitude() - 1);
                     // check for crash
                     if (checkCrash(entity, entity.getPosition(), entity.getAltitude())) {
-                        addReport(processCrash(entity, 0, entity.getPosition()));
+                        reportManager.addReport(processCrash(entity, 0, entity.getPosition()), this);
                     }
                 } else if (entity instanceof EscapePods && entity.isAirborne() && md.getFinalVelocity() < 2) {
                     //Atmospheric Escape Pods that drop below velocity 2 lose altitude as dropping units
@@ -6798,7 +6690,7 @@ public class GameManager implements IGameManager {
                     r.indent();
                     r.addDesc(swarmer);
                     addReport(r);
-                    addReport(destroyEntity(swarmer, "a watery grave", false));
+                    reportManager.addReport(destroyEntity(swarmer, "a watery grave", false), this);
                 } else {
                     // Swarming infantry take a 3d6 point hit.
                     // ASSUMPTION : damage should not be doubled.
@@ -6808,9 +6700,9 @@ public class GameManager implements IGameManager {
                     r.addDesc(swarmer);
                     r.add("3d6");
                     addReport(r);
-                    addReport(damageEntity(swarmer,
+                    reportManager.addReport(damageEntity(swarmer,
                             swarmer.rollHitLocation(ToHitData.HIT_NORMAL, ToHitData.SIDE_FRONT),
-                            Compute.d6(3)));
+                            Compute.d6(3)), this);
                     addNewLines();
                     swarmer.setPosition(curPos);
                 }
@@ -6866,7 +6758,7 @@ public class GameManager implements IGameManager {
                     if (diceRoll.getIntValue() >= 4) {
                         // oops!
                         entity.setPosition(curPos);
-                        addReport(resolveIceBroken(curPos));
+                        reportManager.addReport(resolveIceBroken(curPos), this);
                         curPos = entity.getPosition();
                     } else {
                         // TacOps: immediate PSR with +4 for terrain. If you
@@ -6885,7 +6777,7 @@ public class GameManager implements IGameManager {
 
                             if (diceRoll2.getIntValue() == 6) {
                                 entity.setPosition(curPos);
-                                addReport(resolveIceBroken(curPos));
+                                reportManager.addReport(resolveIceBroken(curPos), this);
                                 curPos = entity.getPosition();
                             }
                         }
@@ -6944,7 +6836,7 @@ public class GameManager implements IGameManager {
                         r.subject = entity.getId();
                         addReport(r);
                         // check for quicksand
-                        addReport(checkQuickSand(curPos));
+                        reportManager.addReport(checkQuickSand(curPos), this);
                     } else if (!entity.hasETypeFlag(Entity.ETYPE_INFANTRY)) {
                         rollTarget = new PilotingRollData(entity.getId(),
                                 5, "entering boggy terrain");
@@ -6960,7 +6852,7 @@ public class GameManager implements IGameManager {
                             r.subject = entity.getId();
                             addReport(r);
                             // check for quicksand
-                            addReport(checkQuickSand(curPos));
+                            reportManager.addReport(checkQuickSand(curPos), this);
                         }
                     }
                 }
@@ -7019,7 +6911,7 @@ public class GameManager implements IGameManager {
                         r.indent();
                         r.addDesc(swarmer);
                         addReport(r);
-                        addReport(destroyEntity(swarmer, "a watery grave", false));
+                        reportManager.addReport(destroyEntity(swarmer, "a watery grave", false), this);
                     } else {
                         // Swarming infantry take a 3d6 point hit.
                         // ASSUMPTION : damage should not be doubled.
@@ -7029,9 +6921,9 @@ public class GameManager implements IGameManager {
                         r.addDesc(swarmer);
                         r.add("3d6");
                         addReport(r);
-                        addReport(damageEntity(swarmer,
+                        reportManager.addReport(damageEntity(swarmer,
                                 swarmer.rollHitLocation(ToHitData.HIT_NORMAL, ToHitData.SIDE_FRONT),
-                                Compute.d6(3)));
+                                Compute.d6(3)), this);
                         addNewLines();
                         swarmer.setPosition(curPos);
                     }
@@ -7157,8 +7049,8 @@ public class GameManager implements IGameManager {
                     // damage and ProtoMechs always require a roll
                     int elevation = (null == prevStep) ? entity.getElevation() : prevStep.getElevation();
                     if (entity.hasETypeFlag(Entity.ETYPE_LAND_AIR_MECH)) {
-                        addReport(landAirMech((LandAirMech) entity, entity.getPosition(), elevation,
-                                entity.delta_distance));
+                        reportManager.addReport(landAirMech((LandAirMech) entity, entity.getPosition(), elevation,
+                                entity.delta_distance), this);
                     } else if (entity.hasETypeFlag(Entity.ETYPE_PROTOMECH)) {
                         vPhaseReport.addAll(landGliderPM((Protomech) entity, entity.getPosition(),
                                 elevation, entity.delta_distance));
@@ -7242,7 +7134,7 @@ public class GameManager implements IGameManager {
                             "side torso destroyed"), vPhaseReport);
                 } else if (entity.isAirborne() && entity.isAero()) {
                     addReport(r);
-                    addReport(processCrash(entity, ((IAero) entity).getCurrentVelocity(), entity.getPosition()));
+                    reportManager.addReport(processCrash(entity, ((IAero) entity).getCurrentVelocity(), entity.getPosition()), this);
                 }
             }
 
@@ -7502,17 +7394,17 @@ public class GameManager implements IGameManager {
                 if (!entity.checkForMASCFailure(md, vReport, crits)) {
                     // The reroll passed, don't process the failure
                     mascFailure = false;
-                    addReport(vReport);
+                    reportManager.addReport(vReport, this);
                 }
             }
             // Check for failure and process it
             if (mascFailure) {
-                addReport(vReport);
+                reportManager.addReport(vReport, this);
                 ApplyMASCOrSuperchargerCriticals(entity, md, crits);
                 return true;
             }
         } else {
-            addReport(vReport);
+            reportManager.addReport(vReport, this);
         }
         return false;
     }
@@ -7555,12 +7447,12 @@ public class GameManager implements IGameManager {
                 if (!entity.checkForSuperchargerFailure(md, vReport, crits)) {
                     // The reroll passed, don't process the failure
                     superchargerFailure = false;
-                    addReport(vReport);
+                    reportManager.addReport(vReport, this);
                 }
             }
             // Check for failure and process it
             if (superchargerFailure) {
-                addReport(vReport);
+                reportManager.addReport(vReport, this);
                 // If this is supercharger failure we need to damage the supercharger as well as
                 // the additional criticals. For mechs this requires the additional step of finding
                 // the slot and marking it as hit so it can't absorb future damage.
@@ -7572,8 +7464,8 @@ public class GameManager implements IGameManager {
                             final CriticalSlot crit = entity.getCritical(loc, slot);
                             if ((null != crit) && (crit.getType() == CriticalSlot.TYPE_EQUIPMENT)
                                     && (crit.getMount().getType().equals(supercharger.getType()))) {
-                                addReport(applyCriticalHit(entity, loc, crit,
-                                        true, 0, false));
+                                reportManager.addReport(applyCriticalHit(entity, loc, crit,
+                                        true, 0, false), this);
                                 break;
                             }
                         }
@@ -7586,7 +7478,7 @@ public class GameManager implements IGameManager {
                 return true;
             }
         } else {
-            addReport(vReport);
+            reportManager.addReport(vReport, this);
         }
         return false;
     }
@@ -7599,16 +7491,16 @@ public class GameManager implements IGameManager {
                 // HACK: if loc is -1, we need to deal motive damage to
                 // the tank, the severity of which is stored in the critslot index
                 if (loc == -1) {
-                    addReport(vehicleMotiveDamage((Tank) entity,
-                            0, true, cs.getIndex()));
+                    reportManager.addReport(vehicleMotiveDamage((Tank) entity,
+                            0, true, cs.getIndex()), this);
                 } else {
-                    addReport(applyCriticalHit(entity, loc, cs,
-                            true, 0, false));
+                    reportManager.addReport(applyCriticalHit(entity, loc, cs,
+                            true, 0, false), this);
                 }
             }
         }
         // do any PSR immediately
-        addReport(resolvePilotingRolls(entity));
+        reportManager.addReport(resolvePilotingRolls(entity), this);
         game.resetPSRs(entity);
         // let the player replot their move as MP might be changed
         md.clear();
@@ -7774,7 +7666,7 @@ public class GameManager implements IGameManager {
                             communicationManager.send(packetManager.createIlluminatedHexesPacket(this));
                         }
                         SearchlightAttackAction saa = (SearchlightAttackAction) ea;
-                        addReport(saa.resolveAction(game));
+                        reportManager.addReport(saa.resolveAction(game), this);
                     } else if (ea instanceof WeaponAttackAction) {
                         WeaponAttackAction waa = (WeaponAttackAction) ea;
                         Entity ae = game.getEntity(waa.getEntityId());
@@ -7888,8 +7780,8 @@ public class GameManager implements IGameManager {
                 ToHitData toHit = new ToHitData();
                 while (damage > 0) {
                     HitData hit = loaded.rollHitLocation(toHit.getHitTable(), ToHitData.SIDE_FRONT);
-                    addReport(damageEntity(loaded, hit, 5, false,
-                            DamageType.NONE, false, true, false));
+                    reportManager.addReport(damageEntity(loaded, hit, 5, false,
+                            DamageType.NONE, false, true, false), this);
                     damage -= 5;
                 }
             }
@@ -7898,8 +7790,8 @@ public class GameManager implements IGameManager {
         if (unsecured) {
             // roll hit location to get a new critical
             HitData hit = ((Entity) a).rollHitLocation(ToHitData.HIT_ABOVE, ToHitData.SIDE_FRONT);
-            addReport(applyCriticalHit((Entity) a, hit.getLocation(), new CriticalSlot(
-                    0, ((Aero) a).getPotCrit()), true, 1, false));
+            reportManager.addReport(applyCriticalHit((Entity) a, hit.getLocation(), new CriticalSlot(
+                    0, ((Aero) a).getPotCrit()), true, 1, false), this);
         }
 
     }
@@ -9665,7 +9557,7 @@ public class GameManager implements IGameManager {
                 r.indent();
                 r.add(entity.getShortName(), true);
                 addReport(r);
-                addReport(destroyEntity(swarmer, "a watery grave", false));
+                reportManager.addReport(destroyEntity(swarmer, "a watery grave", false), this);
                 entityUpdate(swarmerId);
             }
         }
@@ -9850,7 +9742,7 @@ public class GameManager implements IGameManager {
         if (diceRoll.getIntValue() < targetNumber) {
             r.choose(false);
             addReport(r);
-            addReport(damageCrew(entity, 1));
+            reportManager.addReport(damageCrew(entity, 1), this);
         } else {
             r.choose(true);
             addReport(r);
@@ -9955,8 +9847,8 @@ public class GameManager implements IGameManager {
                     addReport(r);
                     int damage = 20;
                     while (damage > 0) {
-                        addReport(damageEntity(entity, entity.rollHitLocation(ToHitData.HIT_NORMAL,
-                                ToHitData.SIDE_REAR), Math.min(5, damage)));
+                        reportManager.addReport(damageEntity(entity, entity.rollHitLocation(ToHitData.HIT_NORMAL,
+                                ToHitData.SIDE_REAR), Math.min(5, damage)), this);
                         damage -= 5;
                     }
                 }
@@ -9966,8 +9858,8 @@ public class GameManager implements IGameManager {
                 addReport(r);
                 int damage = 50;
                 while (damage > 0) {
-                    addReport(damageEntity(entity, entity.rollHitLocation(ToHitData.HIT_NORMAL,
-                            ToHitData.SIDE_REAR), Math.min(5, damage)));
+                    reportManager.addReport(damageEntity(entity, entity.rollHitLocation(ToHitData.HIT_NORMAL,
+                            ToHitData.SIDE_REAR), Math.min(5, damage)), this);
                     damage -= 5;
                 }
             } else {
@@ -9976,8 +9868,8 @@ public class GameManager implements IGameManager {
                 addReport(r);
                 int damage = 100;
                 while (damage > 0) {
-                    addReport(damageEntity(entity, entity.rollHitLocation(ToHitData.HIT_NORMAL,
-                            ToHitData.SIDE_REAR), Math.min(5, damage)));
+                    reportManager.addReport(damageEntity(entity, entity.rollHitLocation(ToHitData.HIT_NORMAL,
+                            ToHitData.SIDE_REAR), Math.min(5, damage)), this);
                     damage -= 5;
                 }
             }
@@ -10087,7 +9979,7 @@ public class GameManager implements IGameManager {
             }
             if (!entity.isHullDown()
                     || (entity.isHullDown() && !entity.canGoHullDown())) {
-                addReport(doEntityFall(entity, roll));
+                reportManager.addReport(doEntityFall(entity, roll), this);
             } else {
                 ServerHelper.sinkToBottom(entity);
 
@@ -10153,7 +10045,7 @@ public class GameManager implements IGameManager {
         r.choose(true);
         addReport(r);
         entity.setPosition(curPos);
-        addReport(doEntityFallsInto(entity, curPos, roll, false));
+        reportManager.addReport(doEntityFallsInto(entity, curPos, roll, false), this);
         return true;
     }
 
@@ -10213,9 +10105,9 @@ public class GameManager implements IGameManager {
             if (isFallRoll && entity.canFall()) {
                 r.choose(false);
                 addReport(r);
-                addReport(doEntityFallsInto(entity, entityElevation,
+                reportManager.addReport(doEntityFallsInto(entity, entityElevation,
                         fallsInPlace ? dest : src, fallsInPlace ? src : dest,
-                        roll, true));
+                        roll, true), this);
             } else {
                 r.messageId = 2190;
                 r.choose(false);
@@ -11416,7 +11308,7 @@ public class GameManager implements IGameManager {
                 }
             } else if (ea instanceof SearchlightAttackAction) {
                 SearchlightAttackAction saa = (SearchlightAttackAction) ea;
-                addReport(saa.resolveAction(game));
+                reportManager.addReport(saa.resolveAction(game), this);
             } else if (ea instanceof UnjamTurretAction) {
                 if (entity instanceof Tank) {
                     ((Tank) entity).unjamTurret(((Tank) entity).getLocTurret());
@@ -11444,7 +11336,7 @@ public class GameManager implements IGameManager {
             } else if (ea instanceof DisengageAction) {
                 MovePath path = new MovePath(game, entity);
                 path.addStep(MovePath.MoveStepType.FLEE);
-                addReport(processLeaveMap(path, false, -1));
+                reportManager.addReport(processLeaveMap(path, false, -1), this);
             } else if (ea instanceof ActivateBloodStalkerAction) {
                 ActivateBloodStalkerAction bloodStalkerAction = (ActivateBloodStalkerAction) ea;
                 Entity target = game.getEntity(bloodStalkerAction.getTargetID());
@@ -11513,7 +11405,7 @@ public class GameManager implements IGameManager {
                 e.setSelfDestructInitiated(false);
             }
         }
-        addReport(vDesc);
+        reportManager.addReport(vDesc, this);
     }
 
     void reportGhostTargetRolls() {
@@ -11697,7 +11589,7 @@ public class GameManager implements IGameManager {
                 final int damage = Math.max(1, Compute.d6() - 1);
 
                 // Damage the platoon.
-                addReport(damageEntity(target, new HitData(Infantry.LOC_INFANTRY), damage));
+                reportManager.addReport(damageEntity(target, new HitData(Infantry.LOC_INFANTRY), damage), this);
 
                 // Damage from AP Pods is applied immediately.
                 target.applyDamage();
@@ -11767,7 +11659,7 @@ public class GameManager implements IGameManager {
             final int damage = Compute.d6();
 
             // Damage the platoon.
-            addReport(damageEntity(target, new HitData(Infantry.LOC_INFANTRY), damage));
+            reportManager.addReport(damageEntity(target, new HitData(Infantry.LOC_INFANTRY), damage), this);
 
             // Damage from AP Pods is applied immediately.
             target.applyDamage();
@@ -11776,10 +11668,10 @@ public class GameManager implements IGameManager {
             final int damage = 5;
 
             // Damage the squad.
-            addReport(damageEntity(target, target.rollHitLocation(0, 0), damage));
-            addReport(damageEntity(target, target.rollHitLocation(0, 0), damage));
-            addReport(damageEntity(target, target.rollHitLocation(0, 0), damage));
-            addReport(damageEntity(target, target.rollHitLocation(0, 0), damage));
+            reportManager.addReport(damageEntity(target, target.rollHitLocation(0, 0), damage), this);
+            reportManager.addReport(damageEntity(target, target.rollHitLocation(0, 0), damage), this);
+            reportManager.addReport(damageEntity(target, target.rollHitLocation(0, 0), damage), this);
+            reportManager.addReport(damageEntity(target, target.rollHitLocation(0, 0), damage), this);
 
             // Damage from B Pods is applied immediately.
             target.applyDamage();
@@ -12342,7 +12234,7 @@ public class GameManager implements IGameManager {
         r.addDesc(ae);
         addReport(r);
         for (int location : criticalLocations) {
-            addReport(criticalEntity(ae, location, false, 0, 1));
+            reportManager.addReport(criticalEntity(ae, location, false, 0, 1), this);
         }
 
         if (missed) {
@@ -12462,7 +12354,7 @@ public class GameManager implements IGameManager {
                     for (Report report : buildingReport) {
                         report.subject = ae.getId();
                     }
-                    addReport(buildingReport);
+                    reportManager.addReport(buildingReport, this);
                 }
             }
 
@@ -12484,10 +12376,10 @@ public class GameManager implements IGameManager {
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
-            addReport(buildingReport);
+            reportManager.addReport(buildingReport, this);
 
             // Damage any infantry in the hex.
-            addReport(damageInfantryIn(bldg, damage, target.getPosition()));
+            reportManager.addReport(damageInfantryIn(bldg, damage, target.getPosition()), this);
 
             if (paa.isZweihandering()) {
                 applyZweihanderSelfDamage(ae, false,  Mech.LOC_RARM, Mech.LOC_LARM);
@@ -12516,7 +12408,7 @@ public class GameManager implements IGameManager {
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
-            addReport(buildingReport);
+            reportManager.addReport(buildingReport, this);
 
             // some buildings scale remaining damage that is not absorbed
             // TODO : this isn't quite right for castles brian
@@ -12545,13 +12437,13 @@ public class GameManager implements IGameManager {
             damage = checkForSpikes(te, hit.getLocation(), damage, ae,
                     (paa.getArm() == PunchAttackAction.LEFT) ?  Mech.LOC_LARM : Mech.LOC_RARM);
             DamageType damageType = DamageType.NONE;
-            addReport(damageEntity(te, hit, damage, false, damageType, false,
-                    false, throughFront));
+            reportManager.addReport(damageEntity(te, hit, damage, false, damageType, false,
+                    false, throughFront), this);
             if (target instanceof VTOL) {
                 // destroy rotor
-                addReport(applyCriticalHit(te, VTOL.LOC_ROTOR,
+                reportManager.addReport(applyCriticalHit(te, VTOL.LOC_ROTOR,
                         new CriticalSlot(CriticalSlot.TYPE_SYSTEM, VTOL.CRIT_ROTOR_DESTROYED),
-                        false, 0, false));
+                        false, 0, false), this);
             }
             // check for extending retractable blades
             if (paa.isBladeExtended(paa.getArm())) {
@@ -12565,8 +12457,8 @@ public class GameManager implements IGameManager {
                 // to be handled differently
                 if (!(target instanceof Infantry)) {
                     addNewLines();
-                    addReport(criticalEntity(te, hit.getLocation(), hit.isRear(), 0,
-                            true, false, damage));
+                    reportManager.addReport(criticalEntity(te, hit.getLocation(), hit.isRear(), 0,
+                            true, false, damage), this);
                 }
 
                 if ((target instanceof BattleArmor) && (hit.getLocation() < te.locations())
@@ -12574,7 +12466,7 @@ public class GameManager implements IGameManager {
                     // TODO : we should really apply BA criticals through the critical
                     // TODO : hits methods. Right now they are applied in damageEntity
                     HitData baHit = new HitData(hit.getLocation(), false, HitData.EFFECT_CRITICAL);
-                    addReport(damageEntity(te, baHit, 0));
+                    reportManager.addReport(damageEntity(te, baHit, 0), this);
                 }
                 // extend the blade
                 // since retracting/extending is a freebie in the movement
@@ -12730,7 +12622,7 @@ public class GameManager implements IGameManager {
                     for (Report report : buildingReport) {
                         report.subject = ae.getId();
                     }
-                    addReport(buildingReport);
+                    reportManager.addReport(buildingReport, this);
                 }
             }
             return;
@@ -12747,10 +12639,10 @@ public class GameManager implements IGameManager {
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
-            addReport(buildingReport);
+            reportManager.addReport(buildingReport, this);
 
             // Damage any infantry in the hex.
-            addReport(damageInfantryIn(bldg, damage, target.getPosition()));
+            reportManager.addReport(damageInfantryIn(bldg, damage, target.getPosition()), this);
 
             // And we're done!
             return;
@@ -12775,7 +12667,7 @@ public class GameManager implements IGameManager {
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
-            addReport(buildingReport);
+            reportManager.addReport(buildingReport, this);
 
             // some buildings scale remaining damage that is not absorbed
             // TODO : this isn't quite right for castles brian
@@ -12819,18 +12711,18 @@ public class GameManager implements IGameManager {
             }
             damage = checkForSpikes(te, hit.getLocation(), damage, ae, leg);
             DamageType damageType = DamageType.NONE;
-            addReport(damageEntity(te, hit, damage, false, damageType, false,
-                    false, throughFront));
+            reportManager.addReport(damageEntity(te, hit, damage, false, damageType, false,
+                    false, throughFront), this);
             if (target instanceof VTOL) {
                 // destroy rotor
-                addReport(applyCriticalHit(te, VTOL.LOC_ROTOR,
+                reportManager.addReport(applyCriticalHit(te, VTOL.LOC_ROTOR,
                         new CriticalSlot(CriticalSlot.TYPE_SYSTEM, VTOL.CRIT_ROTOR_DESTROYED),
-                        false, 0, false));
+                        false, 0, false), this);
             }
 
             if (te.hasQuirk(OptionsConstants.QUIRK_NEG_WEAK_LEGS)) {
                 addNewLines();
-                addReport(criticalEntity(te, hit.getLocation(), hit.isRear(), 0, 0));
+                reportManager.addReport(criticalEntity(te, hit.getLocation(), hit.isRear(), 0, 0), this);
             }
         }
 
@@ -12961,7 +12853,7 @@ public class GameManager implements IGameManager {
                     for (Report report : buildingReport) {
                         report.subject = ae.getId();
                     }
-                    addReport(buildingReport);
+                    reportManager.addReport(buildingReport, this);
                 }
             }
             return;
@@ -12979,10 +12871,10 @@ public class GameManager implements IGameManager {
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
-            addReport(buildingReport);
+            reportManager.addReport(buildingReport, this);
 
             // Damage any infantry in the hex.
-            addReport(damageInfantryIn(bldg, damage, target.getPosition()));
+            reportManager.addReport(damageInfantryIn(bldg, damage, target.getPosition()), this);
 
             // And we're done!
             return;
@@ -13014,7 +12906,7 @@ public class GameManager implements IGameManager {
                 for (Report report : buildingReport) {
                     report.subject = ae.getId();
                 }
-                addReport(buildingReport);
+                reportManager.addReport(buildingReport, this);
 
                 // some buildings scale remaining damage that is not absorbed
                 // TODO : this isn't quite right for castles brian
@@ -13038,8 +12930,8 @@ public class GameManager implements IGameManager {
                     damage += toHit.getMoS() / 3;
                     hit.makeDirectBlow(toHit.getMoS() / 3);
                 }
-                addReport(damageEntity(te, hit, damage, false, DamageType.NONE,
-                        false, false, throughFront));
+                reportManager.addReport(damageEntity(te, hit, damage, false, DamageType.NONE,
+                        false, false, throughFront), this);
             }
         }
 
@@ -13149,7 +13041,7 @@ public class GameManager implements IGameManager {
                     for (Report report : buildingReport) {
                         report.subject = ae.getId();
                     }
-                    addReport(buildingReport);
+                    reportManager.addReport(buildingReport, this);
                 }
             }
             return;
@@ -13166,10 +13058,10 @@ public class GameManager implements IGameManager {
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
-            addReport(buildingReport);
+            reportManager.addReport(buildingReport, this);
 
             // Damage any infantry in the hex.
-            addReport(damageInfantryIn(bldg, damage, target.getPosition()));
+            reportManager.addReport(damageInfantryIn(bldg, damage, target.getPosition()), this);
 
             // And we're done!
             return;
@@ -13195,7 +13087,7 @@ public class GameManager implements IGameManager {
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
-            addReport(buildingReport);
+            reportManager.addReport(buildingReport, this);
 
             // some buildings scale remaining damage that is not absorbed
             // TODO : this isn't quite right for castles brian
@@ -13220,8 +13112,8 @@ public class GameManager implements IGameManager {
                 damage += toHit.getMoS() / 3;
                 hit.makeDirectBlow(toHit.getMoS() / 3);
             }
-            addReport(damageEntity(te, hit, damage, false, DamageType.NONE,
-                    false, false, throughFront));
+            reportManager.addReport(damageEntity(te, hit, damage, false, DamageType.NONE,
+                    false, false, throughFront), this);
             if (((Protomech) ae).isEDPCharged()) {
                 r = new Report(3701);
                 Roll diceRoll2 = Compute.rollD6(2);
@@ -13374,7 +13266,7 @@ public class GameManager implements IGameManager {
             r.add(ae.getLocationAbbr(hit));
             r.newlines = 0;
             addReport(r);
-            addReport(damageEntity(ae, hit, damage));
+            reportManager.addReport(damageEntity(ae, hit, damage), this);
             addNewLines();
             // if this is an industrial mech, it needs to check for crits
             // at the end of turn
@@ -13395,7 +13287,7 @@ public class GameManager implements IGameManager {
                 r.add(toHit.getTableDesc());
                 r.add(te.getLocationAbbr(hit));
                 addReport(r);
-                addReport(damageEntity(te, hit, damage));
+                reportManager.addReport(damageEntity(te, hit, damage), this);
                 addNewLines();
 
                 // Dislodge the swarming infantry.
@@ -13532,7 +13424,7 @@ public class GameManager implements IGameManager {
             r.add(te.getLocationAbbr(hit));
             r.newlines = 0;
             addReport(r);
-            addReport(damageEntity(te, hit, damage));
+            reportManager.addReport(damageEntity(te, hit, damage), this);
         }
 
         addNewLines();
@@ -13555,7 +13447,7 @@ public class GameManager implements IGameManager {
         if (diceRoll2.getIntValue() < rollData.getValue()) {
             r.choose(false);
             addReport(r);
-            addReport(doEntityFall(ae, rollData));
+            reportManager.addReport(doEntityFall(ae, rollData), this);
         } else {
             r.choose(true);
             addReport(r);
@@ -13683,7 +13575,7 @@ public class GameManager implements IGameManager {
             r.add(te.getLocationAbbr(hit));
             r.newlines = 0;
             addReport(r);
-            addReport(damageEntity(te, hit, damage));
+            reportManager.addReport(damageEntity(te, hit, damage), this);
         }
         addNewLines();
     }
@@ -13890,7 +13782,7 @@ public class GameManager implements IGameManager {
                     for (Report report : buildingReport) {
                         report.subject = ae.getId();
                     }
-                    addReport(buildingReport);
+                    reportManager.addReport(buildingReport, this);
                 }
             }
 
@@ -13915,10 +13807,10 @@ public class GameManager implements IGameManager {
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
-            addReport(buildingReport);
+            reportManager.addReport(buildingReport, this);
 
             // Damage any infantry in the hex.
-            addReport(damageInfantryIn(bldg, damage, target.getPosition()));
+            reportManager.addReport(damageInfantryIn(bldg, damage, target.getPosition()), this);
 
             if (caa.isZweihandering()) {
                 if (caa.getClub().getType().hasSubType(MiscType.S_CLUB)) {
@@ -13958,7 +13850,7 @@ public class GameManager implements IGameManager {
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
-            addReport(buildingReport);
+            reportManager.addReport(buildingReport, this);
 
             // some buildings scale remaining damage that is not absorbed
             // TODO : this isn't quite right for castles brian
@@ -13987,13 +13879,13 @@ public class GameManager implements IGameManager {
             damage = checkForSpikes(te, hit.getLocation(), damage, ae, Entity.LOC_NONE);
 
             DamageType damageType = DamageType.NONE;
-            addReport(damageEntity(te, hit, damage, false, damageType, false,
-                    false, throughFront));
+            reportManager.addReport(damageEntity(te, hit, damage, false, damageType, false,
+                    false, throughFront), this);
             if (target instanceof VTOL) {
                 // destroy rotor
-                addReport(applyCriticalHit(te, VTOL.LOC_ROTOR,
+                reportManager.addReport(applyCriticalHit(te, VTOL.LOC_ROTOR,
                         new CriticalSlot(CriticalSlot.TYPE_SYSTEM, VTOL.CRIT_ROTOR_DESTROYED),
-                        false, 0, false));
+                        false, 0, false), this);
             }
         }
 
@@ -14014,8 +13906,8 @@ public class GameManager implements IGameManager {
 
             if (diceRoll2.getIntValue() >= 10) {
                 hit.makeGlancingBlow();
-                addReport(damageEntity(te, hit, 1, false, DamageType.NONE,
-                        true, false, throughFront));
+                reportManager.addReport(damageEntity(te, hit, 1, false, DamageType.NONE,
+                        true, false, throughFront), this);
             }
         }
 
@@ -14278,7 +14170,7 @@ public class GameManager implements IGameManager {
             }
             addReport(r);
 
-            addReport(doEntityDisplacement(te, src, dest, pushPRD));
+            reportManager.addReport(doEntityDisplacement(te, src, dest, pushPRD), this);
 
             // if push actually moved the target, attacker follows through
             if (!te.getPosition().equals(src)) {
@@ -14466,7 +14358,7 @@ public class GameManager implements IGameManager {
             ae.setPosition(pos);
             ae.setElevation(te.getElevation());
             te.setFacing((ae.getFacing() + 3) % 6);
-            addReport(doSetLocationsExposure(ae, game.getBoard().getHex(pos), false, ae.getElevation()));
+            reportManager.addReport(doSetLocationsExposure(ae, game.getBoard().getHex(pos), false, ae.getElevation()), this);
         }
 
         ae.setGrappleSide(aeGrappleSide);
@@ -14644,13 +14536,13 @@ public class GameManager implements IGameManager {
             // move self to least dangerous hex
             PilotingRollData psr = ae.getBasePilotingRoll();
             psr.addModifier(TargetRoll.AUTOMATIC_SUCCESS, "break grapple");
-            addReport(doEntityDisplacement(ae, ae.getPosition(), hexes[best], psr));
+            reportManager.addReport(doEntityDisplacement(ae, ae.getPosition(), hexes[best], psr), this);
             ae.setFacing(hexes[best].direction(te.getPosition()));
         } else {
             // move enemy to most dangerous hex
             PilotingRollData psr = te.getBasePilotingRoll();
             psr.addModifier(TargetRoll.AUTOMATIC_SUCCESS, "break grapple");
-            addReport(doEntityDisplacement(te, te.getPosition(), hexes[worst], psr));
+            reportManager.addReport(doEntityDisplacement(te, te.getPosition(), hexes[worst], psr), this);
             te.setFacing(hexes[worst].direction(ae.getPosition()));
         }
 
@@ -14768,7 +14660,7 @@ public class GameManager implements IGameManager {
             r = new Report(4215);
             r.subject = ae.getId();
             addReport(r);
-            addReport(doEntityDisplacement(ae, ae.getPosition(), caa.getTargetPos(), null));
+            reportManager.addReport(doEntityDisplacement(ae, ae.getPosition(), caa.getTargetPos(), null), this);
             return;
         }
 
@@ -14817,7 +14709,7 @@ public class GameManager implements IGameManager {
             r.subject = ae.getId();
             addReport(r);
             // move attacker to side hex
-            addReport(doEntityDisplacement(ae, src, dest, null));
+            reportManager.addReport(doEntityDisplacement(ae, src, dest, null), this);
         } else if ((target.getTargetType() == Targetable.TYPE_BUILDING)
                 || (target.getTargetType() == Targetable.TYPE_FUEL_TANK)) { // Targeting
             // a building.
@@ -14829,17 +14721,17 @@ public class GameManager implements IGameManager {
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
-            addReport(buildingReport);
+            reportManager.addReport(buildingReport, this);
 
             // Damage any infantry in the hex.
-            addReport(damageInfantryIn(bldg, damage, target.getPosition()));
+            reportManager.addReport(damageInfantryIn(bldg, damage, target.getPosition()), this);
 
             // Apply damage to the attacker.
             int toAttacker = ChargeAttackAction.getDamageTakenBy(ae, bldg, target.getPosition());
             HitData hit = ae.rollHitLocation(ToHitData.HIT_NORMAL, ae.sideTable(target.getPosition()));
             hit.setGeneralDamageType(HitData.DAMAGE_PHYSICAL);
-            addReport(damageEntity(ae, hit, toAttacker, false, DamageType.NONE,
-                    false, false, throughFront));
+            reportManager.addReport(damageEntity(ae, hit, toAttacker, false, DamageType.NONE,
+                    false, false, throughFront), this);
             addNewLines();
             entityUpdate(ae.getId());
 
@@ -14990,17 +14882,17 @@ public class GameManager implements IGameManager {
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
-            addReport(buildingReport);
+            reportManager.addReport(buildingReport, this);
 
             // Damage any infantry in the hex.
-            addReport(damageInfantryIn(bldg, damage, target.getPosition()));
+            reportManager.addReport(damageInfantryIn(bldg, damage, target.getPosition()), this);
 
             // Apply damage to the attacker.
             int toAttacker = AirmechRamAttackAction.getDamageTakenBy(ae, target, ae.delta_distance);
             HitData hit = new HitData(Mech.LOC_CT);
             hit.setGeneralDamageType(HitData.DAMAGE_PHYSICAL);
-            addReport(damageEntity(ae, hit, toAttacker, false, DamageType.NONE,
-                    false, false, throughFront));
+            reportManager.addReport(damageEntity(ae, hit, toAttacker, false, DamageType.NONE,
+                    false, false, throughFront), this);
             addNewLines();
             entityUpdate(ae.getId());
 
@@ -15083,8 +14975,8 @@ public class GameManager implements IGameManager {
             // Damage the missile
             HitData hit = tm.rollHitLocation(ToHitData.HIT_NORMAL,
                     tm.sideTable(te.getPosition(), true));
-            addReport(damageEntity(ae, hit, amsDamage, false,
-                    DamageType.NONE, false, false, false));
+            reportManager.addReport(damageEntity(ae, hit, amsDamage, false,
+                    DamageType.NONE, false, false, false), this);
 
             // If point defense fire destroys the missile, don't process a hit
             if (ae.isDoomed()) {
@@ -15153,9 +15045,9 @@ public class GameManager implements IGameManager {
                     te.sideTable(ae.getPosition(), true));
             hit.setCapital(true);
             hit.setCapMisCritMod(tm.getCritMod());
-            addReport(damageEntity(te, hit,
+            reportManager.addReport(damageEntity(te, hit,
                     TeleMissileAttackAction.getDamageFor(ae), false,
-                    DamageType.NONE, false, false, throughFront));
+                    DamageType.NONE, false, false, throughFront), this);
             destroyEntity(ae, "successful attack");
         }
 
@@ -15310,10 +15202,10 @@ public class GameManager implements IGameManager {
         // if the damage is greater than the initial armor then destroy the
         // entity
         if ((2 * ae.getOArmor(hit)) < damageTaken) {
-            addReport(destroyEntity(ae, "by massive ramming damage", false));
+            reportManager.addReport(destroyEntity(ae, "by massive ramming damage", false), this);
         } else {
-            addReport(damageEntity(ae, hit, damageTaken, false,
-                    DamageType.NONE, false, false, throughFront));
+            reportManager.addReport(damageEntity(ae, hit, damageTaken, false,
+                    DamageType.NONE, false, false, throughFront), this);
         }
 
         r = new Report(4230);
@@ -15325,10 +15217,10 @@ public class GameManager implements IGameManager {
 
         hit = te.rollHitLocation(toHit.getHitTable(), toHit.getSideTable());
         if ((2 * te.getOArmor(hit)) < damage) {
-            addReport(destroyEntity(te, "by massive ramming damage", false));
+            reportManager.addReport(destroyEntity(te, "by massive ramming damage", false), this);
         } else {
-            addReport(damageEntity(te, hit, damage, false, DamageType.NONE,
-                    false, false, throughFront));
+            reportManager.addReport(damageEntity(te, hit, damage, false, DamageType.NONE,
+                    false, false, throughFront), this);
         }
     }
 
@@ -15411,7 +15303,7 @@ public class GameManager implements IGameManager {
             addReport(r);
             int side = Compute.targetSideTable(te, ae);
             int mod = ae.getMotiveSideMod(side);
-            addReport(vehicleMotiveDamage((Tank) ae, mod));
+            reportManager.addReport(vehicleMotiveDamage((Tank) ae, mod), this);
         }
 
         while (damageTaken > 0) {
@@ -15428,8 +15320,8 @@ public class GameManager implements IGameManager {
             damageTaken -= cluster;
             hit.setGeneralDamageType(HitData.DAMAGE_PHYSICAL);
             cluster = checkForSpikes(ae, hit.getLocation(), cluster, te, Mech.LOC_CT);
-            addReport(damageEntity(ae, hit, cluster, false, DamageType.NONE,
-                    false, false, throughFront));
+            reportManager.addReport(damageEntity(ae, hit, cluster, false, DamageType.NONE,
+                    false, false, throughFront), this);
         }
 
         // Damage to target
@@ -15469,7 +15361,7 @@ public class GameManager implements IGameManager {
 
             int side = Compute.targetSideTable(ae, te);
             int mod = te.getMotiveSideMod(side);
-            addReport(vehicleMotiveDamage((Tank) te, mod));
+            reportManager.addReport(vehicleMotiveDamage((Tank) te, mod), this);
         }
 
         // track any additional damage to the attacker due to the target having spikes
@@ -15488,7 +15380,7 @@ public class GameManager implements IGameManager {
                 for (Report report : buildingReport) {
                     report.subject = ae.getId();
                 }
-                addReport(buildingReport);
+                reportManager.addReport(buildingReport, this);
 
                 // some buildings scale remaining damage that is not absorbed
                 // TODO : this isn't quite right for castles brian
@@ -15509,8 +15401,8 @@ public class GameManager implements IGameManager {
                     hit.makeDirectBlow(directBlowCritMod);
                 }
                 cluster = checkForSpikes(te, hit.getLocation(), cluster, ae, Mech.LOC_CT);
-                addReport(damageEntity(te, hit, cluster, false,
-                        DamageType.NONE, false, false, throughFront));
+                reportManager.addReport(damageEntity(te, hit, cluster, false,
+                        DamageType.NONE, false, false, throughFront), this);
             }
         }
 
@@ -15543,7 +15435,7 @@ public class GameManager implements IGameManager {
                         reports.addAll(landAirMech((LandAirMech) ae, ae.getPosition(), 1, ae.delta_distance));
                     }
                 }
-                addReport(reports);
+                reportManager.addReport(reports, this);
             }
         } else {
             // move attacker and target, if possible
@@ -15552,9 +15444,9 @@ public class GameManager implements IGameManager {
 
             if (Compute.isValidDisplacement(game, te.getId(), te.getPosition(), direction)) {
                 addNewLines();
-                addReport(doEntityDisplacement(te, src, dest, new PilotingRollData(
-                        te.getId(), 2, "was charged")));
-                addReport(doEntityDisplacement(ae, ae.getPosition(), src, chargePSR));
+                reportManager.addReport(doEntityDisplacement(te, src, dest, new PilotingRollData(
+                        te.getId(), 2, "was charged")), this);
+                reportManager.addReport(doEntityDisplacement(ae, ae.getPosition(), src, chargePSR), this);
             }
 
             addNewLines();
@@ -15627,13 +15519,13 @@ public class GameManager implements IGameManager {
                     r.subject = attacker.getId();
                     addReport(r);
                 } else if (attackerLocation2 == Entity.LOC_NONE) {
-                    addReport(damageEntity(attacker, new HitData(attackerLocation), 2, false,
-                            DamageType.NONE, false, false, false));
+                    reportManager.addReport(damageEntity(attacker, new HitData(attackerLocation), 2, false,
+                            DamageType.NONE, false, false, false), this);
                 } else {
-                    addReport(damageEntity(attacker, new HitData(attackerLocation), 1, false,
-                            DamageType.NONE, false, false, false));
-                    addReport(damageEntity(attacker, new HitData(attackerLocation2), 1, false,
-                            DamageType.NONE, false, false, false));
+                    reportManager.addReport(damageEntity(attacker, new HitData(attackerLocation), 1, false,
+                            DamageType.NONE, false, false, false), this);
+                    reportManager.addReport(damageEntity(attacker, new HitData(attackerLocation2), 1, false,
+                            DamageType.NONE, false, false, false), this);
                 }
             }
             return Math.max(1, damage - 4);
@@ -15783,15 +15675,15 @@ public class GameManager implements IGameManager {
             ae.setDisplacementAttack(null);
             if (ae.isProne()) {
                 // attacker prone during weapons phase
-                addReport(doEntityFall(ae, daa.getTargetPos(), 2, 3,
-                        ae.getBasePilotingRoll(), false, false));
+                reportManager.addReport(doEntityFall(ae, daa.getTargetPos(), 2, 3,
+                        ae.getBasePilotingRoll(), false, false), this);
 
             } else {
                 // same effect as successful DFA
                 ae.setElevation(ae.calcElevation(aeHex, teHex, 0, false, false));
-                addReport(doEntityDisplacement(ae, ae.getPosition(),
+                reportManager.addReport(doEntityDisplacement(ae, ae.getPosition(),
                         daa.getTargetPos(), new PilotingRollData(ae.getId(), 4,
-                                "executed death from above")));
+                                "executed death from above")), this);
             }
             return;
         }
@@ -15810,8 +15702,8 @@ public class GameManager implements IGameManager {
             addReport(r);
             // entity isn't DFAing any more
             ae.setDisplacementAttack(null);
-            addReport(doEntityFallsInto(ae, ae.getElevation(), ae.getPosition(), daa.getTargetPos(),
-                    ae.getBasePilotingRoll(), true));
+            reportManager.addReport(doEntityFallsInto(ae, ae.getElevation(), ae.getPosition(), daa.getTargetPos(),
+                    ae.getBasePilotingRoll(), true), this);
             return;
         }
 
@@ -15869,7 +15761,7 @@ public class GameManager implements IGameManager {
             addReport(r);
             if (targetDest != null) {
                 // move target to preferred hex
-                addReport(doEntityDisplacement(te, dest, targetDest, null));
+                reportManager.addReport(doEntityDisplacement(te, dest, targetDest, null), this);
                 // attacker falls into destination hex
                 r = new Report(4265);
                 r.subject = ae.getId();
@@ -15879,8 +15771,8 @@ public class GameManager implements IGameManager {
                 addReport(r);
                 // entity isn't DFAing any more
                 ae.setDisplacementAttack(null);
-                addReport(doEntityFall(ae, dest, 2, 3, ae.getBasePilotingRoll(),
-                        false, false), 1);
+                reportManager.addReport(doEntityFall(ae, dest, 2, 3, ae.getBasePilotingRoll(),
+                        false, false), 1, this);
                 Entity violation = Compute.stackingViolation(game, ae.getId(), dest, ae.climbMode());
                 if (violation != null) {
                     // target gets displaced
@@ -15898,8 +15790,8 @@ public class GameManager implements IGameManager {
                 // attacker destroyed
                 // Tanks suffer an ammo/power plant hit.
                 // TODO : a Mech suffers a Head Blown Off crit.
-                addReport(destroyEntity(ae, "impossible displacement",
-                        ae instanceof Mech, ae instanceof Mech));
+                reportManager.addReport(destroyEntity(ae, "impossible displacement",
+                        ae instanceof Mech, ae instanceof Mech), this);
             }
             return;
         }
@@ -15926,10 +15818,10 @@ public class GameManager implements IGameManager {
             for (Report report : buildingReport) {
                 report.subject = ae.getId();
             }
-            addReport(buildingReport);
+            reportManager.addReport(buildingReport, this);
 
             // Damage any infantry in the hex.
-            addReport(damageInfantryIn(bldg, damage, target.getPosition()));
+            reportManager.addReport(damageInfantryIn(bldg, damage, target.getPosition()), this);
         } else { // Target isn't building.
             if (glancing && (te != null)) {
                 damage = (int) (te.isConventionalInfantry() ? Math.ceil(damage / 2.0) : Math.floor(damage / 2.0));
@@ -15955,27 +15847,27 @@ public class GameManager implements IGameManager {
                 }
                 damage -= cluster;
                 cluster = checkForSpikes(te, hit.getLocation(), cluster, ae, Mech.LOC_LLEG, Mech.LOC_RLEG);
-                addReport(damageEntity(te, hit, cluster, false,
-                        DamageType.NONE, false, false, throughFront));
+                reportManager.addReport(damageEntity(te, hit, cluster, false,
+                        DamageType.NONE, false, false, throughFront), this);
             }
 
             if (target instanceof VTOL) {
                 // destroy rotor
-                addReport(applyCriticalHit(te, VTOL.LOC_ROTOR,
+                reportManager.addReport(applyCriticalHit(te, VTOL.LOC_ROTOR,
                         new CriticalSlot(CriticalSlot.TYPE_SYSTEM,
-                                VTOL.CRIT_ROTOR_DESTROYED), false, 0, false));
+                                VTOL.CRIT_ROTOR_DESTROYED), false, 0, false), this);
             }
             // Target entities are pushed away or destroyed.
             Coords targetDest = Compute.getValidDisplacement(game, te.getId(), dest, direction);
             if (targetDest != null) {
-                addReport(doEntityDisplacement(te, dest, targetDest,
-                        new PilotingRollData(te.getId(), 2, "hit by death from above")));
+                reportManager.addReport(doEntityDisplacement(te, dest, targetDest,
+                        new PilotingRollData(te.getId(), 2, "hit by death from above")), this);
             } else {
                 // ack! automatic death! Tanks
                 // suffer an ammo/power plant hit.
                 // TODO : a Mech suffers a Head Blown Off crit.
-                addReport(destroyEntity(te, "impossible displacement",
-                        te instanceof Mech, te instanceof Mech));
+                reportManager.addReport(destroyEntity(te, "impossible displacement",
+                        te instanceof Mech, te instanceof Mech), this);
             }
 
         }
@@ -16000,20 +15892,20 @@ public class GameManager implements IGameManager {
             int cluster = Math.min(5, damageTaken);
             HitData hit = ae.rollHitLocation(ToHitData.HIT_KICK, ToHitData.SIDE_FRONT);
             hit.setGeneralDamageType(HitData.DAMAGE_PHYSICAL);
-            addReport(damageEntity(ae, hit, cluster));
+            reportManager.addReport(damageEntity(ae, hit, cluster), this);
             damageTaken -= cluster;
         }
 
         if (ae.hasQuirk(OptionsConstants.QUIRK_NEG_WEAK_LEGS)) {
             addNewLines();
-            addReport(criticalEntity(ae, Mech.LOC_LLEG, false, 0, 0));
+            reportManager.addReport(criticalEntity(ae, Mech.LOC_LLEG, false, 0, 0), this);
             addNewLines();
-            addReport(criticalEntity(ae, Mech.LOC_RLEG, false, 0, 0));
+            reportManager.addReport(criticalEntity(ae, Mech.LOC_RLEG, false, 0, 0), this);
             if (ae instanceof QuadMech) {
                 addNewLines();
-                addReport(criticalEntity(ae, Mech.LOC_LARM, false, 0, 0));
+                reportManager.addReport(criticalEntity(ae, Mech.LOC_LARM, false, 0, 0), this);
                 addNewLines();
-                addReport(criticalEntity(ae, Mech.LOC_RARM, false, 0, 0));
+                reportManager.addReport(criticalEntity(ae, Mech.LOC_RARM, false, 0, 0), this);
             }
         }
 
@@ -16026,8 +15918,8 @@ public class GameManager implements IGameManager {
         }
         ae.setElevation(ae.calcElevation(aeHex, teHex, 0, false, false));
         // HACK: to avoid automatic falls, displace from dest to dest
-        addReport(doEntityDisplacement(ae, dest, dest, new PilotingRollData(
-                ae.getId(), 4, "executed death from above")));
+        reportManager.addReport(doEntityDisplacement(ae, dest, dest, new PilotingRollData(
+                ae.getId(), 4, "executed death from above")), this);
 
         // entity isn't DFAing any more
         ae.setDisplacementAttack(null);
@@ -16478,7 +16370,7 @@ public class GameManager implements IGameManager {
                     } else {
                         r.choose(false);
                         addReport(r);
-                        addReport(explodeInfernoAmmoFromHeat(entity));
+                        reportManager.addReport(explodeInfernoAmmoFromHeat(entity), this);
                     }
                 }
             } // End avoid-inferno-explosion
@@ -16572,7 +16464,7 @@ public class GameManager implements IGameManager {
                     // add a piloting roll and resolve immediately
                     if (entity.canFall()) {
                         game.addPSR(new PilotingRollData(entity.getId(), 3, "reactor shutdown"));
-                        addReport((Vector<Report>) resolvePilotingRolls());
+                        reportManager.addReport((Vector<Report>) resolvePilotingRolls(), this);
                     }
                     // okay, now mark shut down
                     entity.setShutDown(true);
@@ -16627,7 +16519,7 @@ public class GameManager implements IGameManager {
                             // add a piloting roll and resolve immediately
                             if (entity.canFall()) {
                                 game.addPSR(new PilotingRollData(entity.getId(), 3, "reactor shutdown"));
-                                addReport((Vector<Report>) resolvePilotingRolls());
+                                reportManager.addReport((Vector<Report>) resolvePilotingRolls(), this);
                             }
                             // okay, now mark shut down
                             entity.setShutDown(true);
@@ -16674,7 +16566,7 @@ public class GameManager implements IGameManager {
                     // boom!
                     r.choose(false);
                     addReport(r);
-                    addReport(explodeAmmoFromHeat(entity));
+                    reportManager.addReport(explodeAmmoFromHeat(entity), this);
                 }
             }
 
@@ -16735,7 +16627,7 @@ public class GameManager implements IGameManager {
                 r.add(heatLimitDesc);
                 r.add(damageToCrew);
                 addReport(r);
-                addReport(damageCrew(entity, damageToCrew));
+                reportManager.addReport(damageCrew(entity, damageToCrew), this);
             } else if (mtHeat && (entity.heat >= 32) && !entity.getCrew().isDead()
                     && !entity.getCrew().isDoomed()
                     && !entity.hasAbility(OptionsConstants.MD_PAIN_SHUNT)) {
@@ -16763,7 +16655,7 @@ public class GameManager implements IGameManager {
                 } else {
                     r.choose(false);
                     addReport(r);
-                    addReport(damageCrew(entity, 1));
+                    reportManager.addReport(damageCrew(entity, 1), this);
                 }
             }
 
@@ -16774,7 +16666,7 @@ public class GameManager implements IGameManager {
                 r.subject = entity.getId();
                 r.addDesc(entity);
                 addReport(r);
-                addReport(destroyEntity(entity, "crew death", true));
+                reportManager.addReport(destroyEntity(entity, "crew death", true), this);
             }
 
             // With MaxTech Heat Scale, there may occur critical damage
@@ -16800,7 +16692,7 @@ public class GameManager implements IGameManager {
                     } else {
                         r.choose(false);
                         addReport(r);
-                        addReport(oneCriticalEntity(entity, Compute.randomInt(8), false, 0));
+                        reportManager.addReport(oneCriticalEntity(entity, Compute.randomInt(8), false, 0), this);
                         // add an empty report, for line breaking
                         r = new Report(1210, Report.PUBLIC);
                     }
@@ -16883,7 +16775,7 @@ public class GameManager implements IGameManager {
                     entity.setAltitude(entity.getAltitude() - diceRoll2.getIntValue());
                     // check for crash
                     if (checkCrash(entity, entity.getPosition(), entity.getAltitude())) {
-                        addReport(processCrash(entity, a.getCurrentVelocity(), entity.getPosition()));
+                        reportManager.addReport(processCrash(entity, a.getCurrentVelocity(), entity.getPosition()), this);
                     }
                 }
                 // force unit out of control through heat
@@ -16906,11 +16798,11 @@ public class GameManager implements IGameManager {
                     r.add(6+mech.getCoolantSystemMOS());
                     vDesc.add(r);
                 }
-                addReport(vDesc);
+                reportManager.addReport(vDesc, this);
                 for (Integer loc : crits.keySet()) {
                     List<CriticalSlot> lcs = crits.get(loc);
                     for (CriticalSlot cs : lcs) {
-                        addReport(applyCriticalHit(mech, loc, cs, true, 0, false));
+                        reportManager.addReport(applyCriticalHit(mech, loc, cs, true, 0, false), this);
                     }
                 }
             }
@@ -17094,7 +16986,7 @@ public class GameManager implements IGameManager {
                 Building building = getGame().getBoard().getBuildingAt(entity.getPosition());
 
                 Report.addNewline(vPhaseReport);
-                addReport(criticalGunEmplacement(gun, building, entity.getPosition()));
+                reportManager.addReport(criticalGunEmplacement(gun, building, entity.getPosition()), this);
                 // Taharqa: TacOps rules, protos and vees no longer die instantly
                 // (hurray!)
             } else if (entity instanceof Tank) {
@@ -17104,7 +16996,7 @@ public class GameManager implements IGameManager {
                 }
                 // roll a critical hit
                 Report.addNewline(vPhaseReport);
-                addReport(criticalTank((Tank) entity, Tank.LOC_FRONT, bonus, 0, true));
+                reportManager.addReport(criticalTank((Tank) entity, Tank.LOC_FRONT, bonus, 0, true), this);
             } else if (entity instanceof Protomech) {
                 // this code is taken from inferno hits
                 HitData hit = entity.rollHitLocation(ToHitData.HIT_NORMAL, ToHitData.SIDE_FRONT);
@@ -17129,18 +17021,18 @@ public class GameManager implements IGameManager {
                     int hits = Protomech.POSSIBLE_PILOT_DAMAGE[hit.getLocation()]
                             - ((Protomech) entity).getPilotDamageTaken(hit.getLocation());
                     if (hits > 0) {
-                        addReport(damageCrew(entity, hits));
+                        reportManager.addReport(damageCrew(entity, hits), this);
                         ((Protomech) entity).setPilotDamageTaken(hit.getLocation(),
                                 Protomech.POSSIBLE_PILOT_DAMAGE[hit.getLocation()]);
                     }
                     if (entity.getTransferLocation(hit).getLocation() == Entity.LOC_DESTROYED) {
-                        addReport(destroyEntity(entity, "flaming death", false, true));
+                        reportManager.addReport(destroyEntity(entity, "flaming death", false, true), this);
                         Report.addNewline(vPhaseReport);
                     }
                 }
             } else {
                 // sucks to be you
-                addReport(destroyEntity(entity, "fire", false, false));
+                reportManager.addReport(destroyEntity(entity, "fire", false, false), this);
                 Report.addNewline(vPhaseReport);
             }
         }
@@ -17191,13 +17083,13 @@ public class GameManager implements IGameManager {
 
             // Perform the check.
             if (entity.damageThisPhase >= 20) {
-                addReport(doFlawedCoolingCheck("20+ damage", entity));
+                reportManager.addReport(doFlawedCoolingCheck("20+ damage", entity), this);
             }
             if (entity.hasFallen()) {
-                addReport(doFlawedCoolingCheck("fall", entity));
+                reportManager.addReport(doFlawedCoolingCheck("fall", entity), this);
             }
             if (entity.wasStruck()) {
-                addReport(doFlawedCoolingCheck("being struck", entity));
+                reportManager.addReport(doFlawedCoolingCheck("being struck", entity), this);
             }
             clearFlawedCoolingFlags(entity);
         }
@@ -17500,7 +17392,7 @@ public class GameManager implements IGameManager {
                 r.addDesc(entity);
                 r.add(reason);
                 addReport(r);
-                addReport(destroyEntity(entity, reason, true, true));
+                reportManager.addReport(destroyEntity(entity, reason, true, true), this);
             }
         }
     }
@@ -17522,9 +17414,9 @@ public class GameManager implements IGameManager {
                 r.subject = entity.getId();
                 r.addDesc(entity);
                 addReport(r);
-                addReport(destroyEntity(entity,
+                reportManager.addReport(destroyEntity(entity,
                         "being in atmosphere where it can't survive", true,
-                        true));
+                        true), this);
             }
         }
     }
@@ -17543,9 +17435,9 @@ public class GameManager implements IGameManager {
             }
             if ((entity instanceof Mech) && ((Mech) entity).isIndustrial()
                     && ((Mech) entity).shouldDieAtEndOfTurnBecauseOfWater()) {
-                addReport(destroyEntity(entity,
+                reportManager.addReport(destroyEntity(entity,
                         "being in water without environmental shielding", true,
-                        true));
+                        true), this);
             }
 
         }
@@ -17555,7 +17447,7 @@ public class GameManager implements IGameManager {
         checkForIndustrialWaterDeath();
         checkForIndustrialUnstall();
         checkForIndustrialCrit(); // This might hit an actuator or gyro, so...
-        addReport((Vector<Report>) resolvePilotingRolls());
+        reportManager.addReport((Vector<Report>) resolvePilotingRolls(), this);
     }
 
     protected void checkForIndustrialUnstall() {
@@ -17617,8 +17509,8 @@ public class GameManager implements IGameManager {
                 r.subject = entity.getId();
                 r.addDesc(entity);
                 addReport(r);
-                addReport(destroyEntity(entity,
-                        "being in space where it can't survive", true, true));
+                reportManager.addReport(destroyEntity(entity,
+                        "being in space where it can't survive", true, true), this);
             }
         }
     }
@@ -17644,7 +17536,7 @@ public class GameManager implements IGameManager {
                 r.subject = entity.getId();
                 r.addDesc(entity);
                 addReport(r);
-                addReport(damageCrew(entity, 1));
+                reportManager.addReport(damageCrew(entity, 1), this);
 
             }
         }
@@ -18700,7 +18592,7 @@ public class GameManager implements IGameManager {
                     && !(e.isDestroyed() || e.isDoomed())) {
                 Tank t = (Tank) e;
                 t.immobilize();
-                addReport(forceLandVTOLorWiGE(t));
+                reportManager.addReport(forceLandVTOLorWiGE(t), this);
             }
         }
     }
@@ -18735,7 +18627,7 @@ public class GameManager implements IGameManager {
                                 && (!game.getOptions().booleanOption(OptionsConstants.RPG_CONDITIONAL_EJECTION)
                                 || (game.getOptions().booleanOption(OptionsConstants.RPG_CONDITIONAL_EJECTION)
                                 && lam.isCondEjectCTDest()))) {
-                            addReport(ejectEntity(en, true, false));
+                            reportManager.addReport(ejectEntity(en, true, false), this);
                         }
                     } else {
                         // Aeros eject if the SI Destroyed switch is on
@@ -18744,7 +18636,7 @@ public class GameManager implements IGameManager {
                                 && (!game.getOptions().booleanOption(OptionsConstants.RPG_CONDITIONAL_EJECTION)
                                 || (game.getOptions().booleanOption(OptionsConstants.RPG_CONDITIONAL_EJECTION)
                                 && aero.isCondEjectSIDest()))) {
-                            addReport(ejectEntity(en, true, false));
+                            reportManager.addReport(ejectEntity(en, true, false), this);
                         }
                     }
                     vDesc.addAll(destroyEntity((Entity) ship, "fatal damage threshold"));
@@ -19352,7 +19244,7 @@ public class GameManager implements IGameManager {
                                 && (!game.getOptions().booleanOption(OptionsConstants.RPG_CONDITIONAL_EJECTION)
                                 || (game.getOptions().booleanOption(OptionsConstants.RPG_CONDITIONAL_EJECTION)
                                 && lam.isCondEjectCTDest()))) {
-                            addReport(ejectEntity(te, true, false));
+                            reportManager.addReport(ejectEntity(te, true, false), this);
                         }
                     } else {
                         // Aeros eject if the SI Destroyed switch is on
@@ -19361,7 +19253,7 @@ public class GameManager implements IGameManager {
                                 && (!game.getOptions().booleanOption(OptionsConstants.RPG_CONDITIONAL_EJECTION)
                                 || (game.getOptions().booleanOption(OptionsConstants.RPG_CONDITIONAL_EJECTION)
                                 && aero.isCondEjectSIDest()))) {
-                            addReport(ejectEntity(te, true, false));
+                            reportManager.addReport(ejectEntity(te, true, false), this);
                         }
                     }
                     vDesc.addAll(destroyEntity(te, "Structural Integrity Collapse"));
@@ -20802,7 +20694,7 @@ public class GameManager implements IGameManager {
             if (violation != null) {
                 Coords targetDest = Compute.getValidDisplacement(game, passenger.getId(), position,
                         Compute.d6() - 1);
-                addReport(doEntityDisplacement(violation, position, targetDest, null));
+                reportManager.addReport(doEntityDisplacement(violation, position, targetDest, null), this);
                 // Update the violating entity's position on the client.
                 entityUpdate(violation.getId());
             }
@@ -27108,7 +27000,7 @@ public class GameManager implements IGameManager {
             for (Report report : vBuildingReport) {
                 report.subject = entity.getId();
             }
-            addReport(vBuildingReport);
+            reportManager.addReport(vBuildingReport, this);
         } else {
             // Need to roll based on building type.
             PilotingRollData psr = entity.rollMovementInBuilding(bldg, distance, why, overallMoveType);
@@ -27141,7 +27033,7 @@ public class GameManager implements IGameManager {
                     }
                     HitData hit = entity.rollHitLocation(ToHitData.HIT_NORMAL, side);
                     hit.setGeneralDamageType(HitData.DAMAGE_PHYSICAL);
-                    addReport(damageEntity(entity, hit, damage));
+                    reportManager.addReport(damageEntity(entity, hit, damage), this);
                 }
             }
 
@@ -27166,7 +27058,7 @@ public class GameManager implements IGameManager {
             // Apply the correct amount of damage to infantry in the building.
             // ASSUMPTION: We inflict toBldg damage to infantry and
             // not the amount to bring building to 0 CF.
-            addReport(damageInfantryIn(bldg, toBldg, entering ? curPos : lastPos));
+            reportManager.addReport(damageInfantryIn(bldg, toBldg, entering ? curPos : lastPos), this);
         }
     }
 
@@ -29553,7 +29445,7 @@ public class GameManager implements IGameManager {
         });
         while (sinkableTanks.hasNext()) {
             Entity e = sinkableTanks.next();
-            addReport(destroyEntity(e, "a watery grave", false));
+            reportManager.addReport(destroyEntity(e, "a watery grave", false), this);
         }
     }
 
@@ -29923,39 +29815,12 @@ public class GameManager implements IGameManager {
     }
 
     /**
-     * Add a whole lotta Reports to the players report queues as well as the
-     * Master report queue vPhaseReport.
-     */
-    protected void addReport(Vector<Report> reports) {
-        vPhaseReport.addAll(reports);
-    }
-
-    /**
-     * Add a whole lotta Reports to the players report queues as well as the
-     * Master report queue vPhaseReport, indenting each report by the passed
-     * value.
-     */
-    protected void addReport(Vector<Report> reports, int indents) {
-        for (Report r : reports) {
-            r.indent(indents);
-            vPhaseReport.add(r);
-        }
-    }
-
-    /**
      * Add a single report to the report queue of all players and the master
      * vPhaseReport queue
      */
     @Override
     public void addReport(Report report) {
         vPhaseReport.addElement(report);
-    }
-
-    /**
-     * New Round has started clear everyone's report queue
-     */
-    void clearReports() {
-        vPhaseReport.removeAllElements();
     }
 
     /**
@@ -29983,7 +29848,7 @@ public class GameManager implements IGameManager {
         // LAMs that convert to fighter mode on the landing turn are processed as crashes
         if ((entity instanceof LandAirMech)
                 && (entity.getConversionMode() == LandAirMech.CONV_MODE_FIGHTER)) {
-            addReport(processCrash(entity, 0, entity.getPosition()));
+            reportManager.addReport(processCrash(entity, 0, entity.getPosition()), this);
             return;
         }
         if ((entity instanceof Protomech) || (entity instanceof BattleArmor)) {
@@ -30024,7 +29889,7 @@ public class GameManager implements IGameManager {
 
             // if you fail by more than 7, you automatically fail
             if (fallHeight > 7) {
-                addReport(destroyEntity(entity, "failed assault drop", false, false));
+                reportManager.addReport(destroyEntity(entity, "failed assault drop", false, false), this);
                 entityUpdate(entity.getId());
                 return;
             }
@@ -30060,10 +29925,10 @@ public class GameManager implements IGameManager {
             entity.setElevation(fallHeight + bldgElev);
             if (entity.isConventionalInfantry()) {
                 HitData hit = new HitData(Infantry.LOC_INFANTRY);
-                addReport(damageEntity(entity, hit, 1));
+                reportManager.addReport(damageEntity(entity, hit, 1), this);
                 // LAMs that convert to fighter mode on the landing turn are processed as crashes regardless of roll
             } else {
-                addReport(doEntityFallsInto(entity, c, psr, true));
+                reportManager.addReport(doEntityFallsInto(entity, c, psr, true), this);
             }
         } else {
             // set entity to expected elevation
@@ -30146,11 +30011,11 @@ public class GameManager implements IGameManager {
             for (int i = 0; i < en.locations(); i++) {
                 if (eruption || en.locationIsLeg(i) || en.isProne()) {
                     h = new HitData(i);
-                    addReport(damageEntity(en, h, Compute.d6(2)));
+                    reportManager.addReport(damageEntity(en, h, Compute.d6(2)), this);
                 }
             }
         } else {
-            addReport(destroyEntity(en, "fell into magma", false, false));
+            reportManager.addReport(destroyEntity(en, "fell into magma", false, false), this);
         }
         addNewLines();
     }
@@ -30207,7 +30072,7 @@ public class GameManager implements IGameManager {
         en.setElevation(en.getElevation() - 1);
         // if this means the entity is below the ground, then bye-bye!
         if (Math.abs(en.getElevation()) > en.getHeight()) {
-            addReport(destroyEntity(en, "quicksand"));
+            reportManager.addReport(destroyEntity(en, "quicksand"), this);
         }
     }
 
@@ -30655,7 +30520,7 @@ public class GameManager implements IGameManager {
         // resolve standard to capital one more time
         handleAttackReports.addAll(checkFatalThresholds(lastAttackerId, lastAttackerId));
         Report.addNewline(handleAttackReports);
-        addReport(handleAttackReports);
+        reportManager.addReport(handleAttackReports, this);
         // HACK, but anything else seems to run into weird problems.
         game.setAttacksVector(keptAttacks);
     }

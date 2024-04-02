@@ -121,7 +121,7 @@ public class GameManagerTest {
         gameManager.setGame(testGame);
         gameManager.victory();
 
-        assertSame(1, gameManager.getvPhaseReport().size());
+        assertSame(1, gameManager.reportManager.getvPhaseReport(gameManager).size());
 
         // Second test server tests with both a team != TEAM_NONE and a player != PLAYER_NONE
         // Two reports should be generated
@@ -132,6 +132,6 @@ public class GameManagerTest {
         gameManager2.setGame(testGame);
         gameManager2.victory();
 
-        assertSame(2, gameManager2.getvPhaseReport().size());
+        assertSame(2, gameManager2.reportManager.getvPhaseReport(gameManager2).size());
     }
 }

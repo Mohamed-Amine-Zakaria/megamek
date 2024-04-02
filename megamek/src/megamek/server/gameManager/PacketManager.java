@@ -195,7 +195,7 @@ public class PacketManager {
      * @param gameManager
      */
     protected Packet createEndOfGamePacket(GameManager gameManager) {
-        return new Packet(PacketCommand.END_OF_GAME, gameManager.getDetailedVictoryReport(),
+        return new Packet(PacketCommand.END_OF_GAME, gameManager.reportManager.getDetailedVictoryReport(gameManager),
                 gameManager.getGame().getVictoryPlayerId(), gameManager.getGame().getVictoryTeam());
     }
 
