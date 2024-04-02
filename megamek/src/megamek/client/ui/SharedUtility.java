@@ -19,8 +19,7 @@ import megamek.common.*;
 import megamek.common.MovePath.MoveStepType;
 import megamek.common.annotations.Nullable;
 import megamek.common.options.OptionsConstants;
-import megamek.server.GameManager;
-import megamek.server.Server;
+import megamek.server.gameManager.GameManager;
 
 import java.util.ArrayList;
 import java.util.Enumeration;

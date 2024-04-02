@@ -29,7 +29,7 @@ import megamek.common.options.IOption;
 import megamek.common.options.OptionsConstants;
 import megamek.common.util.BoardUtilities;
 import megamek.common.util.fileUtils.MegaMekFile;
-import megamek.server.GameManager;
+import megamek.server.gameManager.GameManager;
 import megamek.server.Messages;
 import org.apache.logging.log4j.LogManager;
 

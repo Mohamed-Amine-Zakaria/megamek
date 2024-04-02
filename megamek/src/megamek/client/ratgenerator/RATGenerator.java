@@ -257,7 +257,8 @@ public class RATGenerator {
      * @param chassisKey The chassis name to find records for.
      * @return     A <code>Collection</code> of all the availability ratings for the chassis in the era,
      *             or null if there are no records for that era.
-     */
+
+     **/
     public @Nullable Collection<AvailabilityRating> getChassisFactionRatings(int era,
                                                                              String chassisKey) {
         if (chassisIndex.containsKey(era) && chassisIndex.get(era).containsKey(chassisKey)) {

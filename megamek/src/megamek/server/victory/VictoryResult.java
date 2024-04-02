@@ -35,6 +35,8 @@ public class VictoryResult {
     protected Map<Integer, Double> teamScore = new HashMap<>();
     protected double hiScore = 0;
 
+
+
     protected VictoryResult(boolean win) {
         this.victory = win;
         tr = new Throwable();

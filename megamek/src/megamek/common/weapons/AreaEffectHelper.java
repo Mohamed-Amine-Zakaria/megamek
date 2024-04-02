@@ -14,7 +14,7 @@
 package megamek.common.weapons;
 
 import megamek.common.*;
-import megamek.server.GameManager;
+import megamek.server.gameManager.GameManager;
 import org.apache.logging.log4j.LogManager;
 
 import java.util.*;

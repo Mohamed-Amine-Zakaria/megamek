@@ -257,7 +257,7 @@ public class EquipmentType implements ITechnology {
     }
 
     /**
-     * @deprecated The old tech progression system has been replaced by the
+     * The old tech progression system has been replaced by the
      *             TechAdvancement class.
      */
     // @Deprecated This is using the new TechAdvancement class under the hood.

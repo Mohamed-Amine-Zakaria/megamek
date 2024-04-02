@@ -18,6 +18,7 @@ package megamek.server;
 import megamek.common.*;
 import megamek.common.annotations.Nullable;
 import megamek.common.options.OptionsConstants;
+import megamek.server.gameManager.GameManager;
 import org.apache.logging.log4j.LogManager;
 
 import java.util.*;
@@ -33,7 +34,7 @@ public class FireProcessor extends DynamicTerrainProcessor {
     }
 
     @Override
-    void doEndPhaseChanges(Vector<Report> vPhaseReport) {
+    public void doEndPhaseChanges(Vector<Report> vPhaseReport) {
         game = gameManager.getGame();
         this.vPhaseReport = vPhaseReport;
         removeSmokeTerrainFromHexes();
