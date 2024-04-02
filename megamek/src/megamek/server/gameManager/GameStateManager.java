@@ -196,7 +196,7 @@ public class GameStateManager {
                 break;
             case PHYSICAL:
                 gameManager.resolveWhatPlayersCanSeeWhatUnits();
-                gameManager.resolvePhysicalAttacks();
+                gameManager.entityActionManager.resolvePhysicalAttacks(gameManager);
                 gameManager.applyBuildingDamage();
                 gameManager.checkForPSRFromDamage();
                 gameManager.addReport((Report) gameManager.resolvePilotingRolls());
@@ -288,7 +288,7 @@ public class GameStateManager {
             case END:
                 // remove any entities that died in the heat/end phase before
                 // checking for victory
-                gameManager.resetEntityPhase(GamePhase.END);
+                gameManager.entityActionManager.resetEntityPhase(GamePhase.END, gameManager);
                 boolean victory = gameManager.victory(); // note this may add reports
                 // check phase report
                 // HACK: hardcoded message ID check
@@ -309,7 +309,7 @@ public class GameStateManager {
                     }
                 }
                 // Decrement the ASEWAffected counter
-                gameManager.decrementASEWTurns();
+                gameManager.entityActionManager.decrementASEWTurns(gameManager);
 
                 break;
             case END_REPORT:
@@ -419,7 +419,7 @@ public class GameStateManager {
                 gameManager.sendTagInfoReset();
                 gameManager.clearReports();
                 gameManager.resetEntityRound();
-                gameManager.resetEntityPhase(phase);
+                gameManager.entityActionManager.resetEntityPhase(phase, gameManager);
                 gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.transmitAllPlayerUpdates();
 
@@ -475,7 +475,7 @@ public class GameStateManager {
                 gameManager.send(gameManager.createTurnVectorPacket());
                 break;
             case SET_ARTILLERY_AUTOHIT_HEXES:
-                gameManager.deployOffBoardEntities();
+                gameManager.entityActionManager.deployOffBoardEntities(gameManager);
                 gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.transmitAllPlayerUpdates();
                 gameManager.resetActivePlayersDone();
@@ -520,7 +520,7 @@ public class GameStateManager {
             case PHYSICAL:
             case TARGETING:
             case OFFBOARD:
-                gameManager.deployOffBoardEntities();
+                gameManager.entityActionManager.deployOffBoardEntities(gameManager);
 
                 // Check for activating hidden units
                 if (gameManager.game.getOptions().booleanOption(OptionsConstants.ADVANCED_HIDDEN_UNITS)) {
@@ -534,7 +534,7 @@ public class GameStateManager {
                 if (gameManager.doBlind()) {
                     gameManager.updateVisibilityIndicator(null);
                 }
-                gameManager.resetEntityPhase(phase);
+                gameManager.entityActionManager.resetEntityPhase(phase, gameManager);
                 gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.transmitAllPlayerUpdates();
                 gameManager.resetActivePlayersDone();
@@ -545,7 +545,7 @@ public class GameStateManager {
                 gameManager.doTryUnstuck();
                 break;
             case END:
-                gameManager.resetEntityPhase(phase);
+                gameManager.entityActionManager.resetEntityPhase(phase, gameManager);
                 gameManager.clearReports();
                 gameManager.resolveHeat();
                 if (gameManager.game.getPlanetaryConditions().isSandBlowing()
