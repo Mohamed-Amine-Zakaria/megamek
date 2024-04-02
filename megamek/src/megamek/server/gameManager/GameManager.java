@@ -66,7 +66,7 @@ public class GameManager implements IGameManager {
     protected BVCountHelper bvCount = new BVCountHelper();
     protected RatingManager ratingManager = new RatingManager();
     public GameStateManager gameStateManager = new GameStateManager();
-    protected PlayerManager playerManager = new PlayerManager();
+    public PlayerManager playerManager = new PlayerManager();
     protected EntityActionManager entityActionManager = new EntityActionManager();
     protected ReportManager reportManager = new ReportManager();
     protected UtilityManager utilityManager = new UtilityManager();
@@ -290,19 +290,6 @@ public class GameManager implements IGameManager {
         return playerRequestingGameMaster;
     }
 
-    public void processGameMasterRequest() {
-        if (playerRequestingGameMaster != null) {
-            setGameMaster(playerRequestingGameMaster, true);
-            playerRequestingGameMaster = null;
-        }
-    }
-
-    public void setGameMaster(Player player, boolean gameMaster) {
-        player.setGameMaster(gameMaster);
-        transmitPlayerUpdate(player);
-        sendServerChat(player.getName() + " set GameMaster: " + player.getGameMaster());
-    }
-
     public void setSingleBlind(Player player, boolean singleBlind) {
         player.setSingleBlind(singleBlind);
         transmitPlayerUpdate(player);
@@ -317,13 +304,7 @@ public class GameManager implements IGameManager {
 
     @Override
     public void requestTeamChange(int team, Player player) {
-        requestedTeam = team;
-        playerChangingTeam = player;
-        changePlayersTeam = false;
-    }
-
-    public void allowTeamChange() {
-        changePlayersTeam = true;
+        playerManager.changeTeam(team, player, this);
     }
 
     public boolean isTeamChangeRequestInProgress() {
@@ -336,23 +317,6 @@ public class GameManager implements IGameManager {
 
     public int getRequestedTeam() {
         return requestedTeam;
-    }
-
-    void processTeamChangeRequest() {
-        if (playerChangingTeam != null) {
-            playerChangingTeam.setTeam(requestedTeam);
-            getGame().setupTeams();
-            transmitPlayerUpdate(playerChangingTeam);
-            String teamString = "Team " + requestedTeam + "!";
-            if (requestedTeam == Player.TEAM_UNASSIGNED) {
-                teamString = " unassigned!";
-            } else if (requestedTeam == Player.TEAM_NONE) {
-                teamString = " lone wolf!";
-            }
-            sendServerChat(playerChangingTeam.getName() + " has changed teams to " + teamString);
-            playerChangingTeam = null;
-        }
-        changePlayersTeam = false;
     }
 
     /**
@@ -403,120 +367,12 @@ public class GameManager implements IGameManager {
     @Override
     public void disconnect(Player player) {
         // in the lounge, just remove all entities for that player
-        if (getGame().getPhase().isLounge()) {
-            List<Player> gms = game.getPlayersList().stream().filter(p -> p.isGameMaster()).collect(Collectors.toList());
-
-            if (gms.size() > 0) {
-                transferAllEnititiesOwnedBy(player, gms.get(0));
-            } else {
-                removeAllEntitiesOwnedBy(player);
-            }
-        }
-
-        // if a player has active entities, he becomes a ghost
-        // except the VICTORY_PHASE when the disconnected
-        // player is most likely the Bot disconnected after receiving
-        // the COMMAND_END_OF_GAME command
-        // see the Bug 1225949.
-        // Ghost players (Bots mostly) are now removed during the
-        // resetGame(), so we don't need to do it here.
-        // This fixes Bug 3399000 without reintroducing 1225949
-        if (getGame().getPhase().isVictory() || getGame().getPhase().isLounge() || player.isObserver()) {
-            getGame().removePlayer(player.getId());
-            send(new Packet(PacketCommand.PLAYER_REMOVE, player.getId()));
-            // Prevent situation where all players but the disconnected one
-            // are done, and the disconnecting player causes the game to start
-            if (getGame().getPhase().isLounge()) {
-                resetActivePlayersDone();
-            }
-        } else {
-            player.setGhost(true);
-            player.setDone(true);
-            transmitPlayerUpdate(player);
-        }
-
-        // make sure the game advances
-        if (getGame().getPhase().hasTurns() && (null != getGame().getTurn())) {
-            if (getGame().getTurn().isValid(player.getId(), getGame())) {
-                sendGhostSkipMessage(player);
-            }
-        } else {
-            checkReady();
-        }
-
-        // notify other players
-        sendServerChat(player.getName() + " disconnected.");
-
-        // log it
-        LogManager.getLogger().info("s: removed player " + player.getName());
-
-        // Reset the game after Elvis has left the building.
-        if (0 == getGame().getNoOfPlayers()) {
-            resetGame();
-        }
-    }
-
-    /**
-     * Checks each player to see if he has no entities, and if true, sets the
-     * observer flag for that player. An exception is that there are no
-     * observers during the lounge phase.
-     */
-    public void checkForObservers() {
-        for (Enumeration<Player> e = getGame().getPlayers(); e.hasMoreElements(); ) {
-            Player p = e.nextElement();
-            p.setObserver((!p.isGameMaster()) && (getGame().getEntitiesOwnedBy(p) < 1) && !getGame().getPhase().isLounge());
-        }
-    }
-
-    protected void transferAllEnititiesOwnedBy(Player pFrom, Player pTo) {
-        for (Entity entity : game.getEntitiesVector().stream().filter(e -> e.getOwner().equals(pFrom)).collect(Collectors.toList())) {
-            entity.setOwner(pTo);
-        }
-        game.getForces().correct();
-        ServerLobbyHelper.correctLoading(game);
-        ServerLobbyHelper.correctC3Connections(game);
-        send(createFullEntitiesPacket());
+        playerManager.disconnectAPlayer(player, this);
     }
 
     @Override
     public void removeAllEntitiesOwnedBy(Player player) {
-        int pid = player.getId();
-        Forces forces = game.getForces();
-        // Disentangle everything!
-        // remove other player's forces from player's forces
-        forces.getAllForces().stream()
-                .filter(f -> !f.isTopLevel())
-                .filter(f -> f.getOwnerId() != pid)
-                .filter(f -> forces.getForce(f.getParentId()).getOwnerId() == pid)
-                .forEach(forces::promoteForce);
-
-        // remove other player's units from player's forces
-        game.getEntitiesVector().stream()
-                .filter(e -> e.getOwnerId() != pid)
-                .filter(Entity::partOfForce)
-                .filter(e -> forces.getForce(e.getForceId()).getOwnerId() == pid)
-                .forEach(forces::removeEntityFromForces);
-
-        // delete forces of player
-        forces.deleteForces(forces.getAllForces().stream()
-                .filter(f -> f.getOwnerId() == pid)
-                .filter(f -> f.isTopLevel() || !forces.getOwner(f.getParentId()).equals(player))
-                .collect(Collectors.toList()));
-
-        Collection<Entity> delEntities = game.getEntitiesVector().stream()
-                .filter(e -> e.getOwner().equals(player))
-                .collect(Collectors.toList());
-
-        // remove entities of player from any forces, disembark and C3 disconnect them
-        delEntities.forEach(forces::removeEntityFromForces);
-        ServerLobbyHelper.lobbyUnload(game, delEntities);
-        ServerLobbyHelper.performC3Disconnect(game, delEntities);
-
-        // delete entities of player
-        delEntities.forEach(e -> game.removeEntity(e.getId(), IEntityRemovalConditions.REMOVE_NEVER_JOINED));
-
-        // send full update
-        send(createFullEntitiesPacket());
+        playerManager.removeEntities(player, this);
     }
 
     protected void resetEntityRound() {

@@ -85,7 +85,7 @@ public class AllowTeamChangeCommand extends ServerCommand {
                     + gameManager.getPlayerRequestingTeamChange().getName()
                     + " will join Team " + gameManager.getRequestedTeam()
                     + " at the end of the turn.");
-            gameManager.allowTeamChange();
+            gameManager.playerManager.allowTeamChange(gameManager);
         }
     }
 

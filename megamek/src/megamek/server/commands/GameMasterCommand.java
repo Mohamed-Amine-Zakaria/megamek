@@ -58,11 +58,11 @@ public class GameMasterCommand extends ServerCommand {
         GameManager gameManager = (GameManager) server.getGameManager();
         if (player.getGameMaster()) {
             // toggling off game master requires no vote
-            gameManager.setGameMaster(player, false);
+            gameManager.playerManager.setGameMaster(player, false, gameManager);
         } else if (gameManager.getGame() != null && gameManager.getGame().getPhase().isLounge() ) {
             // becoming GameMaster in Lobby is always permitted
             server.sendServerChat(player.getName() + " will become Game Master without vote.");
-            gameManager.setGameMaster(player, true);
+            gameManager.playerManager.setGameMaster(player, true, gameManager);
         } else {
             // becoming GameMaster in regular gameplay requires unanimous human player voting
             for (Player p : server.getGame().getPlayersVector()) {

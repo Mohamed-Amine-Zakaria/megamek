@@ -314,7 +314,7 @@ public class GameStateManager {
                 break;
             case END_REPORT:
                 if (gameManager.changePlayersTeam) {
-                    gameManager.processTeamChangeRequest();
+                    gameManager.playerManager.processTeamChangeRequest(gameManager);
                 }
                 if (gameManager.victory()) {
                     changePhase(GamePhase.VICTORY, gameManager);
@@ -408,7 +408,7 @@ public class GameStateManager {
                 mapSettings.setNullBoards(GameManager.DEFAULT_BOARD);
                 gameManager.send(gameManager.createMapSettingsPacket());
                 gameManager.send(gameManager.createMapSizesPacket());
-                gameManager.checkForObservers();
+                gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.transmitAllPlayerUpdates();
                 break;
             case INITIATIVE:
@@ -420,7 +420,7 @@ public class GameStateManager {
                 gameManager.clearReports();
                 gameManager.resetEntityRound();
                 gameManager.resetEntityPhase(phase);
-                gameManager.checkForObservers();
+                gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.transmitAllPlayerUpdates();
 
                 // roll 'em
@@ -454,7 +454,7 @@ public class GameStateManager {
                 LogManager.getLogger().info("Round " + gameManager.game.getRoundCount() + " memory usage: " + MegaMek.getMemoryUsed());
                 break;
             case DEPLOY_MINEFIELDS:
-                gameManager.checkForObservers();
+                gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.transmitAllPlayerUpdates();
                 gameManager.resetActivePlayersDone();
                 gameManager.setIneligible(phase);
@@ -476,7 +476,7 @@ public class GameStateManager {
                 break;
             case SET_ARTILLERY_AUTOHIT_HEXES:
                 gameManager.deployOffBoardEntities();
-                gameManager.checkForObservers();
+                gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.transmitAllPlayerUpdates();
                 gameManager.resetActivePlayersDone();
                 gameManager.setIneligible(phase);
@@ -535,7 +535,7 @@ public class GameStateManager {
                     gameManager.updateVisibilityIndicator(null);
                 }
                 gameManager.resetEntityPhase(phase);
-                gameManager.checkForObservers();
+                gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.transmitAllPlayerUpdates();
                 gameManager.resetActivePlayersDone();
                 gameManager.setIneligible(phase);
@@ -589,7 +589,7 @@ public class GameStateManager {
                 }
                 gameManager.sendChangedHexes(gameManager.hexUpdateSet);
 
-                gameManager.checkForObservers();
+                gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.transmitAllPlayerUpdates();
                 gameManager.entityAllUpdate();
                 break;
