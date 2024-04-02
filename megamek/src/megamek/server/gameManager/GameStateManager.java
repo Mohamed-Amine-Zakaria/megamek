@@ -172,10 +172,10 @@ public class GameStateManager {
                 gameManager.addReport(new Report(3000, Report.PUBLIC));
                 gameManager.utilityManager.resolveWhatPlayersCanSeeWhatUnits(gameManager);
                 gameManager.resolveAllButWeaponAttacks();
-                gameManager.resolveSelfDestructions();
+                gameManager.combatManager.resolveSelfDestructions(gameManager);
                 gameManager.reportGhostTargetRolls();
-                gameManager.reportLargeCraftECCMRolls();
-                gameManager.resolveOnlyWeaponAttacks();
+                gameManager.reportManager.reportLargeCraftECCMRolls(gameManager);
+                gameManager.combatManager.resolveOnlyWeaponAttacks(gameManager);
                 gameManager.utilityManager.assignAMS(gameManager);
                 gameManager.handleAttacks();
                 gameManager.resolveScheduledNukes();
@@ -227,7 +227,7 @@ public class GameStateManager {
             case TARGETING:
                 gameManager.vPhaseReport.addElement(new Report(1035, Report.PUBLIC));
                 gameManager.resolveAllButWeaponAttacks();
-                gameManager.resolveOnlyWeaponAttacks();
+                gameManager.combatManager.resolveOnlyWeaponAttacks(gameManager);
                 gameManager.handleAttacks();
                 // check reports
                 if (gameManager.vPhaseReport.size() > 1) {
@@ -254,7 +254,7 @@ public class GameStateManager {
                 gameManager.addReport(new Report(1100, Report.PUBLIC));
                 gameManager.resolveAllButWeaponAttacks(); // torso twist or flip arms
                 // possible
-                gameManager.resolveOnlyWeaponAttacks(); // should only be TAG at this point
+                gameManager.combatManager.resolveOnlyWeaponAttacks(gameManager); // should only be TAG at this point
                 gameManager.handleAttacks();
                 for (Enumeration<Player> i = gameManager.game.getPlayers(); i.hasMoreElements(); ) {
                     Player player = i.nextElement();

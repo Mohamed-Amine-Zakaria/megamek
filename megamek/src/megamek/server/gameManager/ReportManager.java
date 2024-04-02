@@ -439,4 +439,30 @@ public class ReportManager {
             }
         }
     }
+
+    void reportLargeCraftECCMRolls(GameManager gameManager) {
+        // run through an enumeration of deployed game entities. If they are
+        // large craft in space, then check the roll
+        // and report it
+        if (!gameManager.game.getBoard().inSpace()
+                || !gameManager.game.getOptions().booleanOption(OptionsConstants.ADVAERORULES_STRATOPS_ECM)) {
+            return;
+        }
+        Report r;
+        for (Iterator<Entity> e = gameManager.game.getEntities(); e.hasNext(); ) {
+            Entity ent = e.next();
+            if (ent.isDeployed() && ent.isLargeCraft()) {
+                r = new Report(3635);
+                r.subject = ent.getId();
+                r.addDesc(ent);
+                int target = ((Aero) ent).getECCMTarget();
+                int roll = ((Aero) ent).getECCMRoll();
+                r.add(roll);
+                r.add(target);
+                int mod = ((Aero) ent).getECCMBonus();
+                r.add(mod);
+                gameManager.addReport(r);
+            }
+        }
+    }
 }

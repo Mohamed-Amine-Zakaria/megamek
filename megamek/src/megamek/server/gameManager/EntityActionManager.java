@@ -367,7 +367,7 @@ public class EntityActionManager {
         }
         int cen = Entity.NONE;
         for (PhysicalResult pr : gameManager.physicalResults) {
-            gameManager.resolvePhysicalAttack(pr, cen);
+            gameManager.combatManager.resolvePhysicalAttack(pr, cen, gameManager);
             cen = pr.aaa.getEntityId();
         }
         gameManager.physicalResults.removeAllElements();
@@ -4734,7 +4734,7 @@ public class EntityActionManager {
                         crashDropShip.getId(),
                         crashDropShip.getPosition());
                 ToHitData toHit = caa.toHit(gameManager.game, true);
-                gameManager.resolveChargeDamage(entity, crashDropShip, toHit, direction);
+                gameManager.combatManager.resolveChargeDamage(entity, crashDropShip, toHit, direction, gameManager);
                 if ((entity.getMovementMode() == EntityMovementMode.WIGE)
                         || (entity.getMovementMode() == EntityMovementMode.VTOL)) {
                     int hitSide = (step.getFacing() - direction) + 6;
@@ -4903,7 +4903,7 @@ public class EntityActionManager {
                             gameManager.addReport(r);
                         } else {
                             // Resolve the charge.
-                            gameManager.resolveChargeDamage(entity, target, toHit, direction);
+                            gameManager.combatManager.resolveChargeDamage(entity, target, toHit, direction, gameManager);
                             // HACK: set the entity's location
                             // to the original hex again, for the other targets
                             if (targets.hasNext()) {
@@ -5533,7 +5533,7 @@ public class EntityActionManager {
         // if we are still here, then collide
         ToHitData toHit = new ToHitData(TargetRoll.AUTOMATIC_SUCCESS, "Its a collision");
         toHit.setSideTable(target.sideTable(src));
-        gameManager.resolveRamDamage((IAero) entity, target, toHit, partial, false);
+        gameManager.combatManager.resolveRamDamage((IAero) entity, target, toHit, partial, false, gameManager);
 
         // Has the target been destroyed?
         if (target.isDoomed()) {
