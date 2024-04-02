@@ -170,18 +170,18 @@ public class ArtilleryCannonWeaponHandler extends AmmoWeaponHandler {
                 } else {
                     radius = 1;
                 }
-                gameManager.deliverArtilleryFlare(targetPos, radius);
+                gameManager.environmentalEffectManager.deliverArtilleryFlare(targetPos, radius, gameManager);
                 return false;
             } else if (ammoType.getMunitionType().contains(AmmoType.Munitions.M_DAVY_CROCKETT_M)) {
                 // The appropriate term here is "Bwahahahahaha..."
                 gameManager.doNuclearExplosion(targetPos, 1, vPhaseReport);
                 return false;
             } else if (ammoType.getMunitionType().contains(AmmoType.Munitions.M_FASCAM)) {
-                gameManager.deliverFASCAMMinefield(targetPos, ae.getOwner().getId(),
-                        ammoType.getRackSize(), ae.getId());
+                gameManager.environmentalEffectManager.deliverFASCAMMinefield(targetPos, ae.getOwner().getId(),
+                        ammoType.getRackSize(), ae.getId(), gameManager);
                 return false;
             } else if (ammoType.getMunitionType().contains(AmmoType.Munitions.M_SMOKE)) {
-                gameManager.deliverArtillerySmoke(targetPos, vPhaseReport);
+                gameManager.environmentalEffectManager.deliverArtillerySmoke(targetPos, vPhaseReport, gameManager);
                 return false;
             } else if (ammoType.getMunitionType().contains(AmmoType.Munitions.M_FAE)) {
                 // Currently Artillery Cannons _can_ make Flak attacks using FAE munitions

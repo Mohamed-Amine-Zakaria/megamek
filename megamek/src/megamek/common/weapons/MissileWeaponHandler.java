@@ -379,8 +379,8 @@ public class MissileWeaponHandler extends AmmoWeaponHandler {
                 && !entityTarget.isAirborne()
                 && !entityTarget.isAirborneVTOLorWIGE()
                 && ((bldg == null) && (wtype.getFireTN() != TargetRoll.IMPOSSIBLE))) {
-            gameManager.tryIgniteHex(target.getPosition(), subjectId, false, false,
-                    new TargetRoll(wtype.getFireTN(), wtype.getName()), 3, vPhaseReport);
+            gameManager.environmentalEffectManager.tryIgniteHex(target.getPosition(), subjectId, false, false,
+                    new TargetRoll(wtype.getFireTN(), wtype.getName()), 3, vPhaseReport, gameManager);
         }
 
         // shots that miss an entity can also potential cause explosions in a

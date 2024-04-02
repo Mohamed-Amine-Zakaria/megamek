@@ -596,7 +596,7 @@ public class ServerHelper {
                         r.add(potentialMineCoords.toFriendlyString());
                         vPhaseReport.add(r);
 
-                        gameManager.revealMinefield(entity.getOwner(), minefield);
+                        gameManager.environmentalEffectManager.revealMinefield(entity.getOwner(), minefield, gameManager);
                     }
                 }
             }

@@ -1,5 +1,6 @@
 package megamek.server.gameManager;
 
+import megamek.MMConstants;
 import megamek.common.*;
 import megamek.common.actions.EntityAction;
 import megamek.common.actions.UnloadStrandedAction;
@@ -18,6 +19,10 @@ import megamek.common.verifier.TestEntity;
 import megamek.server.*;
 import org.apache.logging.log4j.LogManager;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -1556,5 +1561,30 @@ public class CommunicationManager {
      */
     void transmitGameVictoryEventToAll(GameManager gameManager) {
         send(new Packet(PacketCommand.GAME_VICTORY_EVENT));
+    }
+
+    void _sendSaveGame(int connId, String sFile, String sLocalPath, GameManager gameManager) {
+        gameManager.gameStateManager.saveGame(sFile, false, gameManager);
+        String sFinalFile = sFile;
+        if (!sFinalFile.endsWith(MMConstants.SAVE_FILE_GZ_EXT)) {
+            if (sFinalFile.endsWith(MMConstants.SAVE_FILE_EXT)) {
+                sFinalFile = sFile + ".gz";
+            } else {
+                sFinalFile = sFile + MMConstants.SAVE_FILE_GZ_EXT;
+            }
+        }
+        sLocalPath = sLocalPath.replaceAll("\\|", " ");
+        String localFile = MMConstants.SAVEGAME_DIR + File.separator + sFinalFile;
+        try (InputStream in = new FileInputStream(localFile); InputStream bin = new BufferedInputStream(in)) {
+            List<Integer> data = new ArrayList<>();
+            int input;
+            while ((input = bin.read()) != -1) {
+                data.add(input);
+            }
+            send(connId, new Packet(PacketCommand.SEND_SAVEGAME, sFinalFile, data, sLocalPath));
+            sendChat(connId, "***Server", "Save game has been sent to you.");
+        } catch (Exception ex) {
+            LogManager.getLogger().error("Unable to load file: " + localFile, ex);
+        }
     }
 }

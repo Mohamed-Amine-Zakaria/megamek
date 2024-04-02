@@ -110,8 +110,8 @@ public class TeleMissileHandler extends CapitalMissileBayHandler {
     @Override
     public boolean handle(GamePhase phase, Vector<Report> vPhaseReport) {
         // just launch the tele-missile
-        gameManager.deployTeleMissile(ae, wtype, getBayAmmoType(), ae.getEquipmentNum(weapon),
-                getCapMisMod(), calcBayDamageAndHeat(), missileArmor, vPhaseReport);
+        gameManager.environmentalEffectManager.deployTeleMissile(ae, wtype, getBayAmmoType(), ae.getEquipmentNum(weapon),
+                getCapMisMod(), calcBayDamageAndHeat(), missileArmor, vPhaseReport, gameManager);
 
         return false;
 

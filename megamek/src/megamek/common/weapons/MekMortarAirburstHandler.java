@@ -145,7 +145,7 @@ public class MekMortarAirburstHandler extends AmmoWeaponHandler {
         }
 
         // Update hex and report any changes
-        newReports.addAll(gameManager.tryClearHex(targetPos, numRounds, subjectId));
+        newReports.addAll(gameManager.environmentalEffectManager.tryClearHex(targetPos, numRounds, subjectId, gameManager));
         adjustReports(newReports);
         vPhaseReport.addAll(newReports);
 

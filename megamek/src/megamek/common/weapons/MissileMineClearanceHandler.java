@@ -142,7 +142,7 @@ public class MissileMineClearanceHandler extends AmmoWeaponHandler {
             }
         }
         for (Minefield mf : mfRemoved) {
-            gameManager.removeMinefield(mf);
+            gameManager.environmentalEffectManager.removeMinefield(mf, gameManager);
         }
         if (updateMinefields) {
             gameManager.communicationManager.sendChangedMines(targetPos, gameManager);
@@ -181,7 +181,7 @@ public class MissileMineClearanceHandler extends AmmoWeaponHandler {
         }
 
         // Update hex and report any changes
-        newReports.addAll(gameManager.tryClearHex(targetPos, damage, subjectId));
+        newReports.addAll(gameManager.environmentalEffectManager.tryClearHex(targetPos, damage, subjectId, gameManager));
         adjustReports(newReports);
         vPhaseReport.addAll(newReports);
 

@@ -91,14 +91,14 @@ public class SRMFragHandler extends SRMHandler {
         // weapons that can't normally start fires. that's weird.
         // Buildings can't be accidentally ignited.
         if ((bldg != null)
-                && gameManager.tryIgniteHex(target.getPosition(), subjectId, false,
+                && gameManager.environmentalEffectManager.tryIgniteHex(target.getPosition(), subjectId, false,
                         false,
                         new TargetRoll(wtype.getFireTN(), wtype.getName()), 5,
-                        vPhaseReport)) {
+                        vPhaseReport, gameManager)) {
             return;
         }
 
-        Vector<Report> clearReports = gameManager.tryClearHex(target.getPosition(), nDamage, subjectId);
+        Vector<Report> clearReports = gameManager.environmentalEffectManager.tryClearHex(target.getPosition(), nDamage, subjectId, gameManager);
         if (!clearReports.isEmpty()) {
             vPhaseReport.lastElement().newlines = 0;
         }

@@ -496,7 +496,7 @@ public class CapitalMissileBearingsOnlyHandler extends AmmoBayWeaponHandler {
             aaa.setTargetType(target.getTargetType());
             // Run this again, otherwise toHit is left set to the value for the last target in the list...
             setToHit(target);
-            gameManager.assignAMS();
+            gameManager.utilityManager.assignAMS(gameManager);
         } else {
             // Otherwise, find the largest and closest target of those available
             int bestDistance = Integer.MAX_VALUE;
@@ -576,7 +576,7 @@ public class CapitalMissileBearingsOnlyHandler extends AmmoBayWeaponHandler {
             aaa.setTargetId(target.getId());
             aaa.setTargetType(target.getTargetType());
             setToHit(target);
-            gameManager.assignAMS();
+            gameManager.utilityManager.assignAMS(gameManager);
         }
     }
 

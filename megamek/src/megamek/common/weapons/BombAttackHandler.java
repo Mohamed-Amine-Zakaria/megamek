@@ -246,10 +246,10 @@ public class BombAttackHandler extends WeaponHandler {
                 if (type == BombType.B_INFERNO) {
                     gameManager.deliverBombInferno(drop, ae, subjectId, vPhaseReport);
                 } else if (type == BombType.B_THUNDER) {
-                    gameManager.deliverThunderMinefield(drop, ae.getOwner().getId(), 20, ae.getId());
+                    gameManager.environmentalEffectManager.deliverThunderMinefield(drop, ae.getOwner().getId(), 20, ae.getId(), gameManager);
                     List<Coords> hexes = drop.allAdjacent();
                     for (Coords c : hexes) {
-                        gameManager.deliverThunderMinefield(c, ae.getOwner().getId(), 20, ae.getId());
+                        gameManager.environmentalEffectManager.deliverThunderMinefield(c, ae.getOwner().getId(), 20, ae.getId(), gameManager);
                     }
                 } else if (type == BombType.B_FAE_SMALL || type == BombType.B_FAE_LARGE) {
                     AreaEffectHelper.processFuelAirDamage(drop, EquipmentType.get(BombType.getBombInternalName(type)), ae, vPhaseReport, gameManager);

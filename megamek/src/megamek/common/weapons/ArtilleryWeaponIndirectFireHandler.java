@@ -321,7 +321,7 @@ public class ArtilleryWeaponIndirectFireHandler extends AmmoWeaponHandler {
             } else {
                 radius = 1;
             }
-            gameManager.deliverArtilleryFlare(targetPos, radius);
+            gameManager.environmentalEffectManager.deliverArtilleryFlare(targetPos, radius, gameManager);
             return false;
         }
         if (atype.getMunitionType().contains(AmmoType.Munitions.M_DAVY_CROCKETT_M)) {
@@ -338,24 +338,24 @@ public class ArtilleryWeaponIndirectFireHandler extends AmmoWeaponHandler {
             if (atype.getAmmoType() == AmmoType.T_ARROW_IV) {
                 rackSize = atype.isClan() ? 30 : 20;
             }
-            gameManager.deliverFASCAMMinefield(targetPos, ae.getOwner().getId(), rackSize, ae.getId());
+            gameManager.environmentalEffectManager.deliverFASCAMMinefield(targetPos, ae.getOwner().getId(), rackSize, ae.getId(), gameManager);
             return false;
         }
         if (atype.getMunitionType().contains(AmmoType.Munitions.M_INFERNO_IV)) {
-            gameManager.deliverArtilleryInferno(targetPos, ae, subjectId, vPhaseReport);
+            gameManager.environmentalEffectManager.deliverArtilleryInferno(targetPos, ae, subjectId, vPhaseReport, gameManager);
             return false;
         }
         if (atype.getMunitionType().contains(AmmoType.Munitions.M_VIBRABOMB_IV)) {
-            gameManager.deliverThunderVibraMinefield(targetPos, ae.getOwner().getId(), 30,
-                    waa.getOtherAttackInfo(), ae.getId());
+            gameManager.environmentalEffectManager.deliverThunderVibraMinefield(targetPos, ae.getOwner().getId(), 30,
+                    waa.getOtherAttackInfo(), ae.getId(), gameManager);
             return false;
         }
         if (atype.getMunitionType().contains(AmmoType.Munitions.M_SMOKE)) {
-            gameManager.deliverArtillerySmoke(targetPos, vPhaseReport);
+            gameManager.environmentalEffectManager.deliverArtillerySmoke(targetPos, vPhaseReport, gameManager);
             return false;
         }
         if (atype.getMunitionType().contains(AmmoType.Munitions.M_LASER_INHIB)) {
-            gameManager.deliverLIsmoke(targetPos, vPhaseReport);
+            gameManager.environmentalEffectManager.deliverLIsmoke(targetPos, vPhaseReport, gameManager);
             return false;
         }
 

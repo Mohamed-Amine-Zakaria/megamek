@@ -166,8 +166,8 @@ public class SRMInfernoHandler extends SRMHandler {
 
         // light inferno missiles all at once, if not missed
         if (!bMissed) {
-            vPhaseReport.addAll(gameManager.deliverInfernoMissiles(ae, target, hits,
-                    weapon.getCalledShot().getCall()));
+            vPhaseReport.addAll(gameManager.environmentalEffectManager.deliverInfernoMissiles(ae, target, hits,
+                    weapon.getCalledShot().getCall(), gameManager));
         }
         return false;
     }
@@ -284,14 +284,14 @@ public class SRMInfernoHandler extends SRMHandler {
         // a 5 or less
         // you do a normal ignition as though for intentional fires
         if ((bldg != null)
-                && gameManager.tryIgniteHex(target.getPosition(), subjectId, false,
+                && gameManager.environmentalEffectManager.tryIgniteHex(target.getPosition(), subjectId, false,
                         true,
                         new TargetRoll(wtype.getFireTN(), wtype.getName()), 5,
-                        vPhaseReport)) {
+                        vPhaseReport, gameManager)) {
             return;
         }
-        Vector<Report> clearReports = gameManager.tryClearHex(target.getPosition(),
-                nDamage, subjectId);
+        Vector<Report> clearReports = gameManager.environmentalEffectManager.tryClearHex(target.getPosition(),
+                nDamage, subjectId, gameManager);
         if (!clearReports.isEmpty()) {
             vPhaseReport.lastElement().newlines = 0;
         }

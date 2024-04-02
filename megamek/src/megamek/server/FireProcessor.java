@@ -185,7 +185,7 @@ public class FireProcessor extends DynamicTerrainProcessor {
         // Report that damage applied to terrain
         burnReports.addElement(Report.publicReport(3383).indent().add(burnDamage));
 
-        Vector<Report> newReports = gameManager.tryClearHex(coords, burnDamage, Entity.NONE);
+        Vector<Report> newReports = gameManager.environmentalEffectManager.tryClearHex(coords, burnDamage, Entity.NONE, gameManager);
         for (Report nr : newReports) {
             nr.indent(2);
         }

@@ -108,8 +108,8 @@ public class GameStateManager {
                 }
                 break;
             case INITIATIVE:
-                gameManager.resolveWhatPlayersCanSeeWhatUnits();
-                gameManager.detectSpacecraft();
+                gameManager.utilityManager.resolveWhatPlayersCanSeeWhatUnits(gameManager);
+                gameManager.utilityManager.detectSpacecraft(gameManager);
                 gameManager.game.addReports(gameManager.vPhaseReport);
                 changePhase(GamePhase.INITIATIVE_REPORT, gameManager);
                 break;
@@ -133,13 +133,13 @@ public class GameStateManager {
                 changePhase(GamePhase.MOVEMENT, gameManager);
                 break;
             case MOVEMENT:
-                gameManager.detectHiddenUnits();
+                gameManager.utilityManager.detectHiddenUnits(gameManager);
                 ServerHelper.detectMinefields(gameManager.game, gameManager.vPhaseReport, gameManager);
-                gameManager.updateSpacecraftDetection();
-                gameManager.detectSpacecraft();
-                gameManager.resolveWhatPlayersCanSeeWhatUnits();
+                gameManager.utilityManager.updateSpacecraftDetection(gameManager);
+                gameManager.utilityManager.detectSpacecraft(gameManager);
+                gameManager.utilityManager.resolveWhatPlayersCanSeeWhatUnits(gameManager);
                 gameManager.doAllAssaultDrops();
-                gameManager.addMovementHeat();
+                gameManager.utilityManager.addMovementHeat(gameManager);
                 gameManager.applyBuildingDamage();
                 gameManager.checkForPSRFromDamage();
                 gameManager.addReport((Report) gameManager.resolvePilotingRolls()); // Skids cause damage in
@@ -170,13 +170,13 @@ public class GameStateManager {
             case FIRING:
                 // write Weapon Attack Phase header
                 gameManager.addReport(new Report(3000, Report.PUBLIC));
-                gameManager.resolveWhatPlayersCanSeeWhatUnits();
+                gameManager.utilityManager.resolveWhatPlayersCanSeeWhatUnits(gameManager);
                 gameManager.resolveAllButWeaponAttacks();
                 gameManager.resolveSelfDestructions();
                 gameManager.reportGhostTargetRolls();
                 gameManager.reportLargeCraftECCMRolls();
                 gameManager.resolveOnlyWeaponAttacks();
-                gameManager.assignAMS();
+                gameManager.utilityManager.assignAMS(gameManager);
                 gameManager.handleAttacks();
                 gameManager.resolveScheduledNukes();
                 gameManager.applyBuildingDamage();
@@ -200,7 +200,7 @@ public class GameStateManager {
                 changePhase(GamePhase.PHYSICAL, gameManager);
                 break;
             case PHYSICAL:
-                gameManager.resolveWhatPlayersCanSeeWhatUnits();
+                gameManager.utilityManager.resolveWhatPlayersCanSeeWhatUnits(gameManager);
                 gameManager.entityActionManager.resolvePhysicalAttacks(gameManager);
                 gameManager.applyBuildingDamage();
                 gameManager.checkForPSRFromDamage();

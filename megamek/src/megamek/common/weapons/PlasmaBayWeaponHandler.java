@@ -121,8 +121,8 @@ public class PlasmaBayWeaponHandler extends AmmoBayWeaponHandler {
         TargetRoll tn = new TargetRoll(wtype.getFireTN(), wtype.getName());
         if (tn.getValue() != TargetRoll.IMPOSSIBLE) {
             Report.addNewline(vPhaseReport);
-            gameManager.tryIgniteHex(target.getPosition(), subjectId, true, false,
-                    tn, true, -1, vPhaseReport);
+            gameManager.environmentalEffectManager.tryIgniteHex(target.getPosition(), subjectId, true, false,
+                    tn, true, -1, vPhaseReport, gameManager);
         }
     }
 
@@ -152,14 +152,14 @@ public class PlasmaBayWeaponHandler extends AmmoBayWeaponHandler {
         // a 5 or less
         // you do a normal ignition as though for intentional fires
         if ((bldg != null)
-                && gameManager.tryIgniteHex(target.getPosition(), subjectId, true,
+                && gameManager.environmentalEffectManager.tryIgniteHex(target.getPosition(), subjectId, true,
                         false,
                         new TargetRoll(wtype.getFireTN(), wtype.getName()), 5,
-                        vPhaseReport)) {
+                        vPhaseReport, gameManager)) {
             return;
         }
-        Vector<Report> clearReports = gameManager.tryClearHex(target.getPosition(),
-                nDamage, subjectId);
+        Vector<Report> clearReports = gameManager.environmentalEffectManager.tryClearHex(target.getPosition(),
+                nDamage, subjectId, gameManager);
         if (!clearReports.isEmpty()) {
             vPhaseReport.lastElement().newlines = 0;
         }

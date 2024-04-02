@@ -465,7 +465,7 @@ public class ArtilleryWeaponIndirectHomingHandler extends ArtilleryWeaponIndirec
                 || ((AmmoType) ammo.getType()).getAmmoType() == BombType.B_HOMING) {
 
             //this has to be called here or it fires before the TAG shot and we have no target
-            gameManager.assignAMS();
+            gameManager.utilityManager.assignAMS(gameManager);
             calcCounterAV();
             // Report AMS/Pointdefense failure due to Overheating.
             if (pdOverheated

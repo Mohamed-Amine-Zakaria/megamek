@@ -82,9 +82,9 @@ public class SRMSmokeWarheadHandler extends SRMHandler {
                 smokeType = SmokeCloud.SMOKE_HEAVY;
             }
 
-            gameManager.deliverMissileSmoke(center, smokeType, vPhaseReport);
+            gameManager.environmentalEffectManager.deliverMissileSmoke(center, smokeType, vPhaseReport, gameManager);
         } else if (atype.getMunitionType().contains(AmmoType.Munitions.M_ANTI_TSM)) {
-            gameManager.deliverMissileSmoke(center, SmokeCloud.SMOKE_GREEN, vPhaseReport);
+            gameManager.environmentalEffectManager.deliverMissileSmoke(center, SmokeCloud.SMOKE_GREEN, vPhaseReport, gameManager);
         }
         return true;
     }

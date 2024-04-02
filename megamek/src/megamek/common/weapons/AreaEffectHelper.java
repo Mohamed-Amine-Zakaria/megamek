@@ -225,7 +225,7 @@ public class AreaEffectHelper {
                         entitiesToExclude, false);
 
                 TargetRoll fireRoll = new TargetRoll(7, "fuel-air ordnance");
-                gameManager.tryIgniteHex(coords, attacker.getId(), false, false, fireRoll, true, -1, vPhaseReport);
+                gameManager.environmentalEffectManager.tryIgniteHex(coords, attacker.getId(), false, false, fireRoll, true, -1, vPhaseReport, gameManager);
 
                 clearMineFields(coords, Minefield.CLEAR_NUMBER_WEAPON_ACCIDENT, attacker, vPhaseReport, game, gameManager);
             }
@@ -289,13 +289,13 @@ public class AreaEffectHelper {
         ArrayList<Minefield> mfRemoved = new ArrayList<>();
         while (minefields.hasMoreElements()) {
             Minefield mf = minefields.nextElement();
-            if (gameManager.clearMinefield(mf, ae, targetNum, vPhaseReport)) {
+            if (gameManager.environmentalEffectManager.clearMinefield(mf, ae, targetNum, vPhaseReport, gameManager)) {
                 mfRemoved.add(mf);
             }
         }
         // we have to do it this way to avoid a concurrent error problem
         for (Minefield mf : mfRemoved) {
-            gameManager.removeMinefield(mf);
+            gameManager.environmentalEffectManager.removeMinefield(mf, gameManager);
         }
     }
 

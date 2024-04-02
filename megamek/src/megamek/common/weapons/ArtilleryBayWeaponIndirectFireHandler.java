@@ -385,11 +385,11 @@ public class ArtilleryBayWeaponIndirectFireHandler extends AmmoBayWeaponHandler 
 
             if (!bMissed) {
                 // If we hit, only one effect will stack in the target hex
-                gameManager.deliverArtilleryFlare(targetPos, radius);
+                gameManager.environmentalEffectManager.deliverArtilleryFlare(targetPos, radius, gameManager);
             } else {
                 // Deliver a round to each target hex
                 for (Coords c : targets) {
-                    gameManager.deliverArtilleryFlare(c, radius);
+                    gameManager.environmentalEffectManager.deliverArtilleryFlare(c, radius, gameManager);
                 }
             }
             return false;
@@ -413,13 +413,13 @@ public class ArtilleryBayWeaponIndirectFireHandler extends AmmoBayWeaponHandler 
         if (atype.getMunitionType().contains(AmmoType.Munitions.M_FASCAM)) {
             if (!bMissed) {
                 // If we hit, only one effect will stack in the target hex
-                gameManager.deliverFASCAMMinefield(targetPos, ae.getOwner().getId(),
-                        atype.getRackSize(), ae.getId());
+                gameManager.environmentalEffectManager.deliverFASCAMMinefield(targetPos, ae.getOwner().getId(),
+                        atype.getRackSize(), ae.getId(), gameManager);
             } else {
                 // Deliver a round to each target hex
                 for (Coords c : targets) {
-                    gameManager.deliverFASCAMMinefield(c, ae.getOwner().getId(),
-                            atype.getRackSize(), ae.getId());
+                    gameManager.environmentalEffectManager.deliverFASCAMMinefield(c, ae.getOwner().getId(),
+                            atype.getRackSize(), ae.getId(), gameManager);
                 }
             }
             return false;
@@ -427,11 +427,11 @@ public class ArtilleryBayWeaponIndirectFireHandler extends AmmoBayWeaponHandler 
         if (atype.getMunitionType().contains(AmmoType.Munitions.M_INFERNO_IV)) {
             if (!bMissed) {
                 // If we hit, only one effect will stack in the target hex
-                gameManager.deliverArtilleryInferno(targetPos, ae, subjectId, vPhaseReport);
+                gameManager.environmentalEffectManager.deliverArtilleryInferno(targetPos, ae, subjectId, vPhaseReport, gameManager);
             } else {
                 // Deliver a round to each target hex
                 for (Coords c : targets) {
-                    gameManager.deliverArtilleryInferno(c, ae, subjectId, vPhaseReport);
+                    gameManager.environmentalEffectManager.deliverArtilleryInferno(c, ae, subjectId, vPhaseReport, gameManager);
                 }
             }
             return false;
@@ -439,13 +439,13 @@ public class ArtilleryBayWeaponIndirectFireHandler extends AmmoBayWeaponHandler 
         if (atype.getMunitionType().contains(AmmoType.Munitions.M_VIBRABOMB_IV)) {
             if (!bMissed) {
                 // If we hit, only one effect will stack in the target hex
-                gameManager.deliverThunderVibraMinefield(targetPos, ae.getOwner().getId(),
-                        atype.getRackSize(), waa.getOtherAttackInfo(), ae.getId());
+                gameManager.environmentalEffectManager.deliverThunderVibraMinefield(targetPos, ae.getOwner().getId(),
+                        atype.getRackSize(), waa.getOtherAttackInfo(), ae.getId(), gameManager);
             } else {
                 // Deliver a round to each target hex
                 for (Coords c : targets) {
-                    gameManager.deliverThunderVibraMinefield(c, ae.getOwner().getId(),
-                            atype.getRackSize(), waa.getOtherAttackInfo(), ae.getId());
+                    gameManager.environmentalEffectManager.deliverThunderVibraMinefield(c, ae.getOwner().getId(),
+                            atype.getRackSize(), waa.getOtherAttackInfo(), ae.getId(), gameManager);
                 }
             }
             return false;
@@ -453,11 +453,11 @@ public class ArtilleryBayWeaponIndirectFireHandler extends AmmoBayWeaponHandler 
         if (atype.getMunitionType().contains(AmmoType.Munitions.M_SMOKE)) {
             if (!bMissed) {
                 // If we hit, only one effect will stack in the target hex
-                gameManager.deliverArtillerySmoke(targetPos, vPhaseReport);
+                gameManager.environmentalEffectManager.deliverArtillerySmoke(targetPos, vPhaseReport, gameManager);
             } else {
                 // Deliver a round to each target hex
                 for (Coords c : targets) {
-                    gameManager.deliverArtillerySmoke(c, vPhaseReport);
+                    gameManager.environmentalEffectManager.deliverArtillerySmoke(c, vPhaseReport, gameManager);
                 }
             }
             return false;
@@ -465,11 +465,11 @@ public class ArtilleryBayWeaponIndirectFireHandler extends AmmoBayWeaponHandler 
         if (atype.getMunitionType().contains(AmmoType.Munitions.M_LASER_INHIB)) {
             if (!bMissed) {
                 //If we hit, only one effect will stack in the target hex
-                gameManager.deliverLIsmoke(targetPos, vPhaseReport);
+                gameManager.environmentalEffectManager.deliverLIsmoke(targetPos, vPhaseReport, gameManager);
             } else {
                 //Deliver a round to each target hex
                 for (Coords c : targets) {
-                    gameManager.deliverLIsmoke(c, vPhaseReport);
+                    gameManager.environmentalEffectManager.deliverLIsmoke(c, vPhaseReport, gameManager);
                 }
             }
             return false;
@@ -492,13 +492,13 @@ public class ArtilleryBayWeaponIndirectFireHandler extends AmmoBayWeaponHandler 
             ArrayList<Minefield> mfRemoved = new ArrayList<>();
             while (minefields.hasMoreElements()) {
                 Minefield mf = minefields.nextElement();
-                if (gameManager.clearMinefield(mf, ae, Minefield.CLEAR_NUMBER_WEAPON, vPhaseReport)) {
+                if (gameManager.environmentalEffectManager.clearMinefield(mf, ae, Minefield.CLEAR_NUMBER_WEAPON, vPhaseReport, gameManager)) {
                     mfRemoved.add(mf);
                 }
             }
             // we have to do it this way to avoid a concurrent error problem
             for (Minefield mf : mfRemoved) {
-                gameManager.removeMinefield(mf);
+                gameManager.environmentalEffectManager.removeMinefield(mf, gameManager);
             }
         }
         if (!bMissed) {
@@ -509,13 +509,13 @@ public class ArtilleryBayWeaponIndirectFireHandler extends AmmoBayWeaponHandler 
                 ArrayList<Minefield> mfRemoved = new ArrayList<>();
                 while (minefields.hasMoreElements()) {
                     Minefield mf = minefields.nextElement();
-                    if (gameManager.clearMinefield(mf, ae, 10, vPhaseReport)) {
+                    if (gameManager.environmentalEffectManager.clearMinefield(mf, ae, 10, vPhaseReport, gameManager)) {
                         mfRemoved.add(mf);
                     }
                 }
                 // we have to do it this way to avoid a concurrent error problem
                 for (Minefield mf : mfRemoved) {
-                    gameManager.removeMinefield(mf);
+                    gameManager.environmentalEffectManager.removeMinefield(mf, gameManager);
                 }
             }
             // Here we're doing damage for each hit with more standard artillery shells
@@ -534,12 +534,12 @@ public class ArtilleryBayWeaponIndirectFireHandler extends AmmoBayWeaponHandler 
                     ArrayList<Minefield> mfRemoved = new ArrayList<>();
                     while (minefields.hasMoreElements()) {
                         Minefield mf = minefields.nextElement();
-                        if (gameManager.clearMinefield(mf, ae, 10, vPhaseReport)) {
+                        if (gameManager.environmentalEffectManager.clearMinefield(mf, ae, 10, vPhaseReport, gameManager)) {
                             mfRemoved.add(mf);
                         }
                     }
                     for (Minefield mf : mfRemoved) {
-                        gameManager.removeMinefield(mf);
+                        gameManager.environmentalEffectManager.removeMinefield(mf, gameManager);
                     }
                 }
                 gameManager.artilleryDamageArea(c, aaa.getCoords(), atype, subjectId, ae, isFlak,

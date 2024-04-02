@@ -98,15 +98,14 @@ public class VGLWeaponHandler extends AmmoWeaponHandler {
         for (Coords c : affectedCoords) {
             Building bldg = game.getBoard().getBuildingAt(c);
             if (atype.getMunitionType().contains(AmmoType.Munitions.M_SMOKE)) {
-                gameManager.deliverSmokeGrenade(c, vPhaseReport);
+                gameManager.environmentalEffectManager.deliverSmokeGrenade(c, vPhaseReport, gameManager);
             } else if (atype.getMunitionType().contains(AmmoType.Munitions.M_CHAFF)) {
-                gameManager.deliverChaffGrenade(c, vPhaseReport);
+                gameManager.environmentalEffectManager.deliverChaffGrenade(c, vPhaseReport, gameManager);
             } else if (atype.getMunitionType().contains(AmmoType.Munitions.M_INCENDIARY)) {
                 Vector<Report> dmgReports;
                 // Delivery an inferno to the hex
                 Targetable grenadeTarget = new HexTarget(c, Targetable.TYPE_HEX_IGNITE);
-                dmgReports = gameManager
-                        .deliverInfernoMissiles(ae, grenadeTarget, 1);
+                dmgReports = gameManager.environmentalEffectManager.deliverInfernoMissiles(ae, grenadeTarget, 1, gameManager);
                 r = new Report(3372);
                 r.add("Hex " + c.getBoardNum());
                 r.indent();
@@ -120,8 +119,8 @@ public class VGLWeaponHandler extends AmmoWeaponHandler {
                 if (bldg != null) {
                     grenadeTarget = new BuildingTarget(c, game.getBoard(),
                             Targetable.TYPE_BLDG_IGNITE);
-                    dmgReports = gameManager.deliverInfernoMissiles(ae,
-                            grenadeTarget, 1);
+                    dmgReports = gameManager.environmentalEffectManager.deliverInfernoMissiles(ae,
+                            grenadeTarget, 1, gameManager);
                     r = new  Report(3372);
                     r.add(bldg.getName());
                     r.indent();
@@ -140,8 +139,7 @@ public class VGLWeaponHandler extends AmmoWeaponHandler {
                             && Compute.isInBuilding(game, entTarget)) {
                         continue;
                     }
-                    dmgReports = gameManager
-                            .deliverInfernoMissiles(ae, entTarget, 1);
+                    dmgReports = gameManager.environmentalEffectManager.deliverInfernoMissiles(ae, entTarget, 1, gameManager);
                     r = new  Report(3371);
                     r.addDesc(entTarget);
                     r.indent();

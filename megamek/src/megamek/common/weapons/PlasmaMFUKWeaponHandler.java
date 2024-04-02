@@ -84,8 +84,8 @@ public class PlasmaMFUKWeaponHandler extends EnergyWeaponHandler {
         TargetRoll tn = new TargetRoll(wtype.getFireTN(), wtype.getName());
         if (tn.getValue() != TargetRoll.IMPOSSIBLE) {
             Report.addNewline(vPhaseReport);
-            gameManager.tryIgniteHex(target.getPosition(), subjectId, true, false,
-                    tn, true, -1, vPhaseReport);
+            gameManager.environmentalEffectManager.tryIgniteHex(target.getPosition(), subjectId, true, false,
+                    tn, true, -1, vPhaseReport, gameManager);
         }
     }
 
@@ -110,11 +110,11 @@ public class PlasmaMFUKWeaponHandler extends EnergyWeaponHandler {
         // TODO : change this for TacOps - now you roll another 2d6 first and on a 5 or less
         // TODO : you do a normal ignition as though for intentional fires
         if ((bldg != null)
-                && gameManager.tryIgniteHex(target.getPosition(), subjectId, true, false,
-                        new TargetRoll(wtype.getFireTN(), wtype.getName()), 5, vPhaseReport)) {
+                && gameManager.environmentalEffectManager.tryIgniteHex(target.getPosition(), subjectId, true, false,
+                        new TargetRoll(wtype.getFireTN(), wtype.getName()), 5, vPhaseReport, gameManager)) {
             return;
         }
-        Vector<Report> clearReports = gameManager.tryClearHex(target.getPosition(), nDamage, subjectId);
+        Vector<Report> clearReports = gameManager.environmentalEffectManager.tryClearHex(target.getPosition(), nDamage, subjectId, gameManager);
         if (!clearReports.isEmpty()) {
             vPhaseReport.lastElement().newlines = 0;
         }

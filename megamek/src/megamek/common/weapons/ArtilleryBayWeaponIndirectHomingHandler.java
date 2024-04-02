@@ -204,7 +204,7 @@ public class ArtilleryBayWeaponIndirectHomingHandler extends ArtilleryBayWeaponI
         //mounting AMS
         if (atype != null
                 && atype.getAmmoType() == AmmoType.T_ARROW_IV) {
-            gameManager.assignAMS();
+            gameManager.utilityManager.assignAMS(gameManager);
         }
         while (nweaponsHit > 0) {
             int hits = 1;
@@ -445,7 +445,7 @@ public class ArtilleryBayWeaponIndirectHomingHandler extends ArtilleryBayWeaponI
                 || ((AmmoType) ammoUsed.getType()).getAmmoType() == BombType.B_HOMING) {
 
             //this has to be called here or it fires before the TAG shot and we have no target
-            gameManager.assignAMS();
+            gameManager.utilityManager.assignAMS(gameManager);
             calcCounterAV();
             // Report AMS/Pointdefense failure due to Overheating.
             if (pdOverheated

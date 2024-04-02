@@ -128,7 +128,7 @@ public class MekMortarSmokeHandler extends AmmoWeaponHandler {
             }
         }
 
-        gameManager.deliverSmokeMortar(targetPos, vPhaseReport, duration);
+        gameManager.environmentalEffectManager.deliverSmokeMortar(targetPos, vPhaseReport, duration, gameManager);
         return false;
     }
 

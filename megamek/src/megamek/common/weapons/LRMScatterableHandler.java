@@ -116,20 +116,20 @@ public class LRMScatterableHandler extends MissileWeaponHandler {
 
         // Handle the thunder munitions.
         if (atype.getMunitionType().contains(AmmoType.Munitions.M_THUNDER_AUGMENTED)) {
-            gameManager.deliverThunderAugMinefield(coords, ae.getOwner().getId(),
-                    density, ae.getId());
+            gameManager.environmentalEffectManager.deliverThunderAugMinefield(coords, ae.getOwner().getId(),
+                    density, ae.getId(), gameManager);
         } else if (atype.getMunitionType().contains(AmmoType.Munitions.M_THUNDER)) {
-            gameManager.deliverThunderMinefield(coords, ae.getOwner().getId(),
-                    density, ae.getId());
+            gameManager.environmentalEffectManager.deliverThunderMinefield(coords, ae.getOwner().getId(),
+                    density, ae.getId(), gameManager);
         } else if (atype.getMunitionType().contains(AmmoType.Munitions.M_THUNDER_INFERNO)) {
-            gameManager.deliverThunderInfernoMinefield(coords, ae.getOwner().getId(),
-                    density, ae.getId());
+            gameManager.environmentalEffectManager.deliverThunderInfernoMinefield(coords, ae.getOwner().getId(),
+                    density, ae.getId(), gameManager);
         } else if (atype.getMunitionType().contains(AmmoType.Munitions.M_THUNDER_VIBRABOMB)) {
-            gameManager.deliverThunderVibraMinefield(coords, ae.getOwner().getId(),
-                    density, waa.getOtherAttackInfo(), ae.getId());
+            gameManager.environmentalEffectManager.deliverThunderVibraMinefield(coords, ae.getOwner().getId(),
+                    density, waa.getOtherAttackInfo(), ae.getId(), gameManager);
         } else if (atype.getMunitionType().contains(AmmoType.Munitions.M_THUNDER_ACTIVE)) {
-            gameManager.deliverThunderActiveMinefield(coords, ae.getOwner().getId(),
-                    density, ae.getId());
+            gameManager.environmentalEffectManager.deliverThunderActiveMinefield(coords, ae.getOwner().getId(),
+                    density, ae.getId(), gameManager);
         }
         return true;
     }

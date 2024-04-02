@@ -94,10 +94,10 @@ public class EntityActionManager {
         }
 
         // Notify the clients about any building updates.
-        gameManager.applyAffectedBldgs();
+        gameManager.environmentalEffectManager.applyAffectedBldgs(gameManager);
 
         // Unit movement may detect hidden units
-        gameManager.detectHiddenUnits();
+        gameManager.utilityManager.detectHiddenUnits(gameManager);
 
         // Update visibility indications if using double blind.
         if (gameManager.doBlind()) {
@@ -345,7 +345,7 @@ public class EntityActionManager {
         gameManager.game.resetTeleMissileAttacks();
 
         // remove any duplicate attack declarations
-        gameManager.cleanupPhysicalAttacks();
+        gameManager.environmentalEffectManager.cleanupPhysicalAttacks(gameManager);
 
         // loop thru received attack actions
         for (Enumeration<EntityAction> i = gameManager.game.getActions(); i.hasMoreElements(); ) {
@@ -904,7 +904,7 @@ public class EntityActionManager {
             }
             boolean collapse = gameManager.checkBuildingCollapseWhileMoving(bldg, entity, entity.getPosition());
             if (collapse) {
-                gameManager.addAffectedBldg(bldg, true);
+                gameManager.environmentalEffectManager.addAffectedBldg(bldg, true, gameManager);
                 if (wigeFlyover) {
                     // If the building is collapsed by a WiGE flying over it, the WiGE drops one level of elevation.
                     entity.setElevation(entity.getElevation() - 1);
@@ -915,7 +915,7 @@ public class EntityActionManager {
         entity.setDone(true);
         entity.setDeployed(true);
         gameManager.entityUpdate(entity.getId());
-        gameManager.reportManager.addReport(gameManager.doSetLocationsExposure(entity, hex, false, entity.getElevation()), gameManager);
+        gameManager.reportManager.addReport(gameManager.utilityManager.doSetLocationsExposure(entity, hex, false, entity.getElevation(), gameManager), gameManager);
     }
 
     protected void resetEntityRound(GameManager gameManager) {
@@ -1006,7 +1006,7 @@ public class EntityActionManager {
             a.setCurrentVelocity(1);
             a.liftOff(1);
             if (entity instanceof Dropship) {
-                gameManager.applyDropShipProximityDamage(md.getFinalCoords(), true, md.getFinalFacing(), entity);
+                gameManager.environmentalEffectManager.applyDropShipProximityDamage(md.getFinalCoords(), true, md.getFinalFacing(), entity, gameManager);
             }
             gameManager.checkForTakeoffDamage(a);
             entity.setPosition(entity.getPosition().translated(entity.getFacing(), a.getTakeOffLength()));
@@ -1018,11 +1018,11 @@ public class EntityActionManager {
         if (md.contains(MovePath.MoveStepType.VTAKEOFF) && entity.isAero()) {
             IAero a = (IAero) entity;
             rollTarget = a.checkVerticalTakeOff();
-            if (gameManager.doVerticalTakeOffCheck(entity, rollTarget)) {
+            if (gameManager.utilityManager.doVerticalTakeOffCheck(entity, rollTarget, gameManager)) {
                 a.setCurrentVelocity(0);
                 a.liftOff(1);
                 if (entity instanceof Dropship) {
-                    gameManager.applyDropShipProximityDamage(md.getFinalCoords(), (Dropship) a);
+                    gameManager.environmentalEffectManager.applyDropShipProximityDamage(md.getFinalCoords(), (Dropship) a, gameManager);
                 }
                 gameManager.checkForTakeoffDamage(a);
             }
@@ -1036,8 +1036,8 @@ public class EntityActionManager {
             rollTarget = a.checkLanding(md.getLastStepMovementType(), md.getFinalVelocity(),
                     md.getFinalCoords(), md.getFinalFacing(), false);
             gameManager.attemptLanding(entity, rollTarget);
-            gameManager.checkLandingTerrainEffects(a, true, md.getFinalCoords(),
-                    md.getFinalCoords().translated(md.getFinalFacing(), a.getLandingLength()), md.getFinalFacing());
+            gameManager.environmentalEffectManager.checkLandingTerrainEffects(a, true, md.getFinalCoords(),
+                    md.getFinalCoords().translated(md.getFinalFacing(), a.getLandingLength()), md.getFinalFacing(), gameManager);
             a.land();
             entity.setPosition(md.getFinalCoords().translated(md.getFinalFacing(),
                     a.getLandingLength()));
@@ -1053,9 +1053,9 @@ public class EntityActionManager {
                     md.getFinalFacing(), true);
             gameManager.attemptLanding(entity, rollTarget);
             if (entity instanceof Dropship) {
-                gameManager.applyDropShipLandingDamage(md.getFinalCoords(), (Dropship) a);
+                gameManager.environmentalEffectManager.applyDropShipLandingDamage(md.getFinalCoords(), (Dropship) a, gameManager);
             }
-            gameManager.checkLandingTerrainEffects(a, true, md.getFinalCoords(), md.getFinalCoords(), md.getFinalFacing());
+            gameManager.environmentalEffectManager.checkLandingTerrainEffects(a, true, md.getFinalCoords(), md.getFinalCoords(), md.getFinalFacing(), gameManager);
             a.land();
             entity.setPosition(md.getFinalCoords());
             entity.setDone(true);
@@ -1319,8 +1319,8 @@ public class EntityActionManager {
             if (firstStep) {
                 rollTarget = entity.checkGunningIt(overallMoveType);
                 if (rollTarget.getValue() != TargetRoll.CHECK_FALSE) {
-                    int mof = gameManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos,
-                            curPos, rollTarget, false);
+                    int mof = gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos,
+                            curPos, rollTarget, false, gameManager);
                     if (mof > 0) {
                         // Since this is the first step, we don't have a previous step so we'll pass
                         // this one in case it's needed to process a skid.
@@ -1357,8 +1357,8 @@ public class EntityActionManager {
                     || overallMoveType == EntityMovementType.MOVE_VTOL_SPRINT)) {
                 rollTarget = entity.checkUsingOverdrive(EntityMovementType.MOVE_SPRINT);
                 if (rollTarget.getValue() != TargetRoll.CHECK_FALSE) {
-                    int mof = gameManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos,
-                            curPos, rollTarget, false);
+                    int mof = gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos,
+                            curPos, rollTarget, false, gameManager);
                     if (mof > 0) {
                         if (gameManager.entityActionManager.processFailedVehicleManeuver(entity, curPos, 0, step, step.isThisStepBackwards(),
                                 lastStepMoveType, distance, 2, mof, gameManager)) {
@@ -1440,7 +1440,7 @@ public class EntityActionManager {
                     rollTarget = a.checkThrustSI(thrustUsed, overallMoveType);
                     if ((rollTarget.getValue() != TargetRoll.CHECK_FALSE)
                             && !(entity instanceof FighterSquadron) && !gameManager.game.useVectorMove()) {
-                        if (!gameManager.doSkillCheckInSpace(entity, rollTarget)) {
+                        if (!gameManager.utilityManager.doSkillCheckInSpace(entity, rollTarget, gameManager)) {
                             a.setSI(a.getSI() - 1);
                             if (entity instanceof LandAirMech) {
                                 gameManager.reportManager.addReport(gameManager.criticalEntity(entity, Mech.LOC_CT, false, 0, 1), gameManager);
@@ -1481,7 +1481,7 @@ public class EntityActionManager {
                             && !(entity instanceof TeleMissile)) {
                         int targetRoll = 2 + (thrustUsed - (2 * health))
                                 + (2 * hits);
-                        gameManager.resistGForce(entity, targetRoll);
+                        gameManager.utilityManager.resistGForce(entity, targetRoll, gameManager);
                     }
 
                     thrustUsed = 0;
@@ -1508,7 +1508,7 @@ public class EntityActionManager {
 
                 rollTarget = a.checkManeuver(step, overallMoveType);
                 if (rollTarget.getValue() != TargetRoll.CHECK_FALSE) {
-                    if (!gameManager.doSkillCheckManeuver(entity, rollTarget)) {
+                    if (!gameManager.utilityManager.doSkillCheckManeuver(entity, rollTarget, gameManager)) {
                         a.setFailedManeuver(true);
                         int forward = Math.max(step.getVelocityLeft() / 2, 1);
                         if (forward < step.getVelocityLeft()) {
@@ -1722,8 +1722,8 @@ public class EntityActionManager {
                                     distribution[currentDoor] - 2);
 
                             Entity fighter = gameManager.game.getEntity(fighterId);
-                            if (!gameManager.launchUnit(entity, fighter, curPos, curFacing, step.getVelocity(),
-                                    step.getAltitude(), step.getVectors(), bonus)) {
+                            if (!gameManager.environmentalEffectManager.launchUnit(entity, fighter, curPos, curFacing, step.getVelocity(),
+                                    step.getAltitude(), step.getVectors(), bonus, gameManager)) {
                                 LogManager.getLogger().error("Server was told to unload "
                                         + fighter.getDisplayName() + " from " + entity.getDisplayName()
                                         + " into " + curPos.getBoardNum());
@@ -1756,9 +1756,9 @@ public class EntityActionManager {
                         for (int dropShipId : launches) {
                             // check to see if we are in the same door
                             Entity ds = gameManager.game.getEntity(dropShipId);
-                            if (!gameManager.launchUnit(entity, ds, curPos, curFacing,
+                            if (!gameManager.environmentalEffectManager.launchUnit(entity, ds, curPos, curFacing,
                                     step.getVelocity(), step.getAltitude(),
-                                    step.getVectors(), 0)) {
+                                    step.getVectors(), 0, gameManager)) {
                                 LogManager.getLogger().error("Error! Server was told to unload "
                                         + ds.getDisplayName() + " from "
                                         + entity.getDisplayName() + " into "
@@ -1795,7 +1795,7 @@ public class EntityActionManager {
                                 currentBay.destroyDoorNext();
                             }
                             Entity drop = gameManager.game.getEntity(unitId);
-                            gameManager.dropUnit(drop, entity, curPos, step.getAltitude());
+                            gameManager.environmentalEffectManager.dropUnit(drop, entity, curPos, step.getAltitude(), gameManager);
                         }
                     }
                     // now apply any damage to bay doors
@@ -1818,7 +1818,7 @@ public class EntityActionManager {
                 // entity.setHullDown(false);
                 wasProne = false;
                 gameManager.game.resetPSRs(entity);
-                entityFellWhileAttemptingToStand = !gameManager.doSkillCheckInPlace(entity, rollTarget);
+                entityFellWhileAttemptingToStand = !gameManager.utilityManager.doSkillCheckInPlace(entity, rollTarget, gameManager);
             }
             // did the entity just fall?
             if (entityFellWhileAttemptingToStand) {
@@ -2135,8 +2135,8 @@ public class EntityActionManager {
                 rollTarget = entity.checkTurnModeFailure(overallMoveType, straight,
                         md.getMpUsed(), step.getPosition());
                 if (rollTarget.getValue() != TargetRoll.CHECK_FALSE) {
-                    int mof = gameManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos,
-                            curPos, rollTarget, false);
+                    int mof = gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos,
+                            curPos, rollTarget, false, gameManager);
                     if (mof > 0) {
                         if (gameManager.entityActionManager.processFailedVehicleManeuver(entity, curPos,
                                 step.getFacing() - curFacing,
@@ -2166,8 +2166,8 @@ public class EntityActionManager {
                 rollTarget = entity.getBasePilotingRoll();
                 entity.addPilotingModifierForTerrain(rollTarget);
                 rollTarget.addModifier(0, "bootlegger maneuver");
-                int mof = gameManager.doSkillCheckWhileMoving(entity, lastElevation,
-                        curPos, curPos, rollTarget, false);
+                int mof = gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation,
+                        curPos, curPos, rollTarget, false, gameManager);
                 if (mof > 0) {
                     // If the bootlegger maneuver fails, we treat it as a turn in a random direction.
                     gameManager.entityActionManager.processFailedVehicleManeuver(entity, curPos, Compute.d6() < 4 ? -1 : 1,
@@ -2231,8 +2231,8 @@ public class EntityActionManager {
                     entity.addPilotingModifierForTerrain(rollTarget, curPos);
                     rollTarget.append(new PilotingRollData(entity.getId(),
                             2 * leapDistance, "leaping (leg damage)"));
-                    if (0 < gameManager.doSkillCheckWhileMoving(entity, lastElevation,
-                            lastPos, curPos, rollTarget, false)) {
+                    if (0 < gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation,
+                            lastPos, curPos, rollTarget, false, gameManager)) {
                         // do leg damage
                         gameManager.reportManager.addReport(gameManager.damageEntity(entity, new HitData(Mech.LOC_LLEG), leapDistance), gameManager);
                         gameManager.reportManager.addReport(gameManager.damageEntity(entity, new HitData(Mech.LOC_RLEG), leapDistance), gameManager);
@@ -2254,12 +2254,12 @@ public class EntityActionManager {
                     entity.addPilotingModifierForTerrain(rollTarget, curPos);
                     rollTarget.append(new PilotingRollData(entity.getId(),
                             leapDistance, "leaping (fall)"));
-                    if (0 < gameManager.doSkillCheckWhileMoving(entity, lastElevation,
-                            lastPos, curPos, rollTarget, false)) {
+                    if (0 < gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation,
+                            lastPos, curPos, rollTarget, false, gameManager)) {
                         entity.setElevation(lastElevation);
-                        gameManager.reportManager.addReport(gameManager.doEntityFallsInto(entity, lastElevation,
+                        gameManager.reportManager.addReport(gameManager.utilityManager.doEntityFallsInto(entity, lastElevation,
                                 lastPos, curPos,
-                                entity.getBasePilotingRoll(overallMoveType), false), gameManager);
+                                entity.getBasePilotingRoll(overallMoveType), false, gameManager), gameManager);
                     }
                 }
             }
@@ -2276,11 +2276,11 @@ public class EntityActionManager {
                     // We need to ensure that falls will happen from the proper
                     // facing
                     entity.setFacing(curFacing);
-                    psrFailed = (0 < gameManager.doSkillCheckWhileMoving(entity,
-                            lastElevation, lastPos, lastPos, rollTarget, true));
+                    psrFailed = (0 < gameManager.utilityManager.doSkillCheckWhileMoving(entity,
+                            lastElevation, lastPos, lastPos, rollTarget, true, gameManager));
                 } else {
-                    psrFailed = (0 < gameManager.doSkillCheckWhileMoving(entity,
-                            lastElevation, lastPos, lastPos, rollTarget, false));
+                    psrFailed = (0 < gameManager.utilityManager.doSkillCheckWhileMoving(entity,
+                            lastElevation, lastPos, lastPos, rollTarget, false, gameManager));
                 }
 
                 // Does the entity skid?
@@ -2347,8 +2347,8 @@ public class EntityActionManager {
                         overallMoveType, prevStep, prevFacing, curFacing,
                         lastPos, curPos, distance, md.hasActiveMASC());
                 if (rollTarget.getValue() != TargetRoll.CHECK_FALSE) {
-                    int moF = gameManager.doSkillCheckWhileMoving(entity, lastElevation,
-                            lastPos, curPos, rollTarget, false);
+                    int moF = gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation,
+                            lastPos, curPos, rollTarget, false, gameManager);
                     if (moF > 0) {
                         int elev;
                         int sideslipDistance;
@@ -2411,8 +2411,8 @@ public class EntityActionManager {
             rollTarget = entity.checkRubbleMove(step, overallMoveType, curHex,
                     lastPos, curPos, isLastStep, isPavementStep);
             if (rollTarget.getValue() != TargetRoll.CHECK_FALSE) {
-                gameManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos, curPos,
-                        rollTarget, true);
+                gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos, curPos,
+                        rollTarget, true, gameManager);
             }
 
             // check if we are using reckless movement
@@ -2420,11 +2420,11 @@ public class EntityActionManager {
                     lastPos, curPos, prevHex);
             if (rollTarget.getValue() != TargetRoll.CHECK_FALSE) {
                 if (entity instanceof Mech) {
-                    gameManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos,
-                            curPos, rollTarget, true);
+                    gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos,
+                            curPos, rollTarget, true, gameManager);
                 } else if (entity instanceof Tank) {
-                    if (0 < gameManager.doSkillCheckWhileMoving(entity, lastElevation,
-                            lastPos, curPos, rollTarget, false)) {
+                    if (0 < gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation,
+                            lastPos, curPos, rollTarget, false, gameManager)) {
                         // assume VTOLs in flight are always in clear terrain
                         if ((0 == curHex.terrainsPresent())
                                 || (step.getClearance() > 0)) {
@@ -2496,8 +2496,8 @@ public class EntityActionManager {
             rollTarget = entity.checkBogDown(step, lastStepMoveType, curHex,
                     lastPos, curPos, lastElevation, isPavementStep);
             if (rollTarget.getValue() != TargetRoll.CHECK_FALSE) {
-                if (0 < gameManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos,
-                        curPos, rollTarget, false)) {
+                if (0 < gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos,
+                        curPos, rollTarget, false, gameManager)) {
                     entity.setStuck(true);
                     entity.setCanUnstickByJumping(true);
                     r = new Report(2081);
@@ -2514,10 +2514,10 @@ public class EntityActionManager {
                         int direction = lastPos.direction(curPos);
                         Coords targetDest = Compute.getValidDisplacement(gameManager.game,
                                 entity.getId(), curPos, direction);
-                        gameManager.reportManager.addReport(gameManager.doEntityDisplacement(violation, curPos,
+                        gameManager.reportManager.addReport(gameManager.utilityManager.doEntityDisplacement(violation, curPos,
                                 targetDest,
                                 new PilotingRollData(violation.getId(), 0,
-                                        "domino effect")), gameManager);
+                                        "domino effect"), gameManager), gameManager);
                         // Update the violating entity's position on the client.
                         gameManager.entityUpdate(violation.getId());
                     }
@@ -2618,8 +2618,8 @@ public class EntityActionManager {
                     // infantry otherwise would get double damage
                     // when moving from clear into mined woods
                     entity.setPosition(curPos);
-                    if (gameManager.enterMinefield(entity, curPos, step.getElevation(),
-                            isOnGround, gameManager.vPhaseReport)) {
+                    if (gameManager.environmentalEffectManager.enterMinefield(entity, curPos, step.getElevation(),
+                            isOnGround, gameManager.vPhaseReport, gameManager)) {
                         // resolve any piloting rolls from damage unless unit
                         // was jumping
                         if (stepMoveType != EntityMovementType.MOVE_JUMP) {
@@ -2644,7 +2644,7 @@ public class EntityActionManager {
                         fellDuringMovement = true;
                     }
                     // reset mines if anything detonated
-                    gameManager.resetMines();
+                    gameManager.environmentalEffectManager.resetMines(gameManager);
                 }
             }
 
@@ -2659,7 +2659,7 @@ public class EntityActionManager {
                             r.subject = entity.getId();
                             r.add(entity.getShortName(), true);
                             gameManager.addReport(r);
-                            gameManager.revealMinefield(owner, mf);
+                            gameManager.environmentalEffectManager.revealMinefield(owner, mf, gameManager);
                         }
                     }
                 }
@@ -2680,11 +2680,11 @@ public class EntityActionManager {
 
                 // Now do the skill check.
                 entity.setFacing(curFacing);
-                gameManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos, curPos, rollTarget, true);
+                gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos, curPos, rollTarget, true, gameManager);
 
                 // Swarming infantry platoons may drown.
                 if (curHex.terrainLevel(Terrains.WATER) > 1) {
-                    gameManager.drownSwarmer(entity, curPos);
+                    gameManager.utilityManager.drownSwarmer(entity, curPos, gameManager);
                 }
 
                 // Do we need to remove a game turn for the swarmer
@@ -2705,16 +2705,16 @@ public class EntityActionManager {
                 }
 
                 // check for inferno wash-off
-                gameManager.checkForWashedInfernos(entity, curPos);
+                gameManager.utilityManager.checkForWashedInfernos(entity, curPos, gameManager);
             }
 
             // In water, may or may not be a new hex, necessary to
             // check during movement, for breach damage, and always
             // set dry if appropriate
             // TODO : possibly make the locations local and set later
-            gameManager.reportManager.addReport(gameManager.doSetLocationsExposure(entity, curHex,
+            gameManager.reportManager.addReport(gameManager.utilityManager.doSetLocationsExposure(entity, curHex,
                     stepMoveType == EntityMovementType.MOVE_JUMP,
-                    step.getElevation()), gameManager);
+                    step.getElevation(), gameManager), gameManager);
 
             // check for breaking ice by breaking through from below
             if ((lastElevation < 0) && (step.getElevation() == 0)
@@ -3029,17 +3029,17 @@ public class EntityActionManager {
                         && !entity.hasFallen()) {
                     rollTarget = entity.getBasePilotingRoll(overallMoveType);
                     rollTarget.addModifier(0, "moving backwards over an elevation change");
-                    gameManager.doSkillCheckWhileMoving(entity, entity.getElevation(),
-                            curPos, curPos, rollTarget, true);
+                    gameManager.utilityManager.doSkillCheckWhileMoving(entity, entity.getElevation(),
+                            curPos, curPos, rollTarget, true, gameManager);
                 } else if ((entity instanceof Mech) && !entity.hasFallen()) {
                     rollTarget = entity.getBasePilotingRoll(overallMoveType);
                     rollTarget.addModifier(0, "moving backwards over an elevation change");
-                    gameManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos, lastPos, rollTarget, true);
+                    gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation, lastPos, lastPos, rollTarget, true, gameManager);
                 } else if (entity instanceof Tank) {
                     rollTarget = entity.getBasePilotingRoll(overallMoveType);
                     rollTarget.addModifier(0, "moving backwards over an elevation change");
-                    if (gameManager.doSkillCheckWhileMoving(entity, entity.getElevation(), curPos, lastPos,
-                            rollTarget, false) < 0) {
+                    if (gameManager.utilityManager.doSkillCheckWhileMoving(entity, entity.getElevation(), curPos, lastPos,
+                            rollTarget, false, gameManager) < 0) {
                         curPos = lastPos;
                     }
                 }
@@ -3086,7 +3086,7 @@ public class EntityActionManager {
 
                     gameManager.passBuildingWall(entity, bldgEntered, lastPos, curPos, distance, reason,
                             step.isThisStepBackwards(), lastStepMoveType, true);
-                    gameManager.addAffectedBldg(bldgEntered, collapsed);
+                    gameManager.environmentalEffectManager.addAffectedBldg(bldgEntered, collapsed, gameManager);
                 }
 
                 // Clean up the entity if it has been destroyed.
@@ -3115,7 +3115,7 @@ public class EntityActionManager {
                             (curHex.containsTerrain(Terrains.BRIDGE_ELEV)
                                     && curElevation > curHex.terrainLevel(Terrains.BRIDGE_ELEV)));
                     boolean collapse = gameManager.checkBuildingCollapseWhileMoving(bldg, entity, curPos);
-                    gameManager.addAffectedBldg(bldg, collapse);
+                    gameManager.environmentalEffectManager.addAffectedBldg(bldg, collapse, gameManager);
                     // If the building is collapsed by a WiGE flying over it, the WiGE drops one level of elevation.
                     // This could invalidate the remainder of the movement path, so we will send it back to the client.
                     if (collapse && wigeFlyingOver) {
@@ -3157,8 +3157,8 @@ public class EntityActionManager {
             if (vehicleAffectedByCliff && isDownCliff && !isPavementStep) {
                 rollTarget = entity.getBasePilotingRoll(stepMoveType);
                 rollTarget.append(new PilotingRollData(entity.getId(), 0, "moving down a sheer cliff"));
-                if (gameManager.doSkillCheckWhileMoving(entity, lastElevation,
-                        lastPos, curPos, rollTarget, false) > 0) {
+                if (gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation,
+                        lastPos, curPos, rollTarget, false, gameManager) > 0) {
                     gameManager.reportManager.addReport(gameManager.vehicleMotiveDamage((Tank) entity, 0), gameManager);
                     gameManager.addNewLines();
                     turnOver = true;
@@ -3171,8 +3171,8 @@ public class EntityActionManager {
             if (mechAffectedByCliff && !quadveeVehMode && isDownCliff && !isPavementStep) {
                 rollTarget = entity.getBasePilotingRoll(moveType);
                 rollTarget.append(new PilotingRollData(entity.getId(), -stepHeight - 1, "moving down a sheer cliff"));
-                if (gameManager.doSkillCheckWhileMoving(entity, lastElevation,
-                        lastPos, curPos, rollTarget, true) > 0) {
+                if (gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation,
+                        lastPos, curPos, rollTarget, true, gameManager) > 0) {
                     gameManager.addNewLines();
                     turnOver = true;
                     break;
@@ -3183,8 +3183,8 @@ public class EntityActionManager {
             if (mechAffectedByCliff && !quadveeVehMode && isUpCliff && !isPavementStep) {
                 rollTarget = entity.getBasePilotingRoll(moveType);
                 rollTarget.append(new PilotingRollData(entity.getId(), stepHeight, "moving up a sheer cliff"));
-                if (gameManager.doSkillCheckWhileMoving(entity, lastElevation,
-                        lastPos, lastPos, rollTarget, false) > 0) {
+                if (gameManager.utilityManager.doSkillCheckWhileMoving(entity, lastElevation,
+                        lastPos, lastPos, rollTarget, false, gameManager) > 0) {
                     r = new Report(2209);
                     r.addDesc(entity);
                     r.subject = entity.getId();
@@ -3214,11 +3214,11 @@ public class EntityActionManager {
                     // Not being swarmed
                     entity.setProne(true);
                     // check to see if we washed off infernos
-                    gameManager.checkForWashedInfernos(entity, curPos);
+                    gameManager.utilityManager.checkForWashedInfernos(entity, curPos, gameManager);
                 } else {
                     // Being swarmed
                     entity.setPosition(curPos);
-                    if (gameManager.doDislodgeSwarmerSkillCheck(entity, rollTarget, curPos)) {
+                    if (gameManager.utilityManager.doDislodgeSwarmerSkillCheck(entity, rollTarget, curPos, gameManager)) {
                         // Entity falls
                         curFacing = entity.getFacing();
                         curPos = entity.getPosition();
@@ -3228,7 +3228,7 @@ public class EntityActionManager {
                     // roll failed, go prone but don't dislodge swarmers
                     entity.setProne(true);
                     // check to see if we washed off infernos
-                    gameManager.checkForWashedInfernos(entity, curPos);
+                    gameManager.utilityManager.checkForWashedInfernos(entity, curPos, gameManager);
                     break;
                 }
             }
@@ -3323,14 +3323,14 @@ public class EntityActionManager {
         // if we ran with destroyed hip or gyro, we need a psr
         rollTarget = entity.checkRunningWithDamage(overallMoveType);
         if (rollTarget.getValue() != TargetRoll.CHECK_FALSE && entity.canFall()) {
-            gameManager.doSkillCheckInPlace(entity, rollTarget);
+            gameManager.utilityManager.doSkillCheckInPlace(entity, rollTarget, gameManager);
         }
 
         // if we sprinted with MASC or a supercharger, then we need a PSR
         rollTarget = entity.checkSprintingWithMASCXorSupercharger(overallMoveType,
                 entity.mpUsed);
         if (rollTarget.getValue() != TargetRoll.CHECK_FALSE && entity.canFall()) {
-            gameManager.doSkillCheckInPlace(entity, rollTarget);
+            gameManager.utilityManager.doSkillCheckInPlace(entity, rollTarget, gameManager);
         }
 
         // if we used ProtoMech myomer booster, roll 2d6
@@ -3355,11 +3355,11 @@ public class EntityActionManager {
 
         rollTarget = entity.checkSprintingWithMASCAndSupercharger(overallMoveType, entity.mpUsed);
         if (rollTarget.getValue() != TargetRoll.CHECK_FALSE) {
-            gameManager.doSkillCheckInPlace(entity, rollTarget);
+            gameManager.utilityManager.doSkillCheckInPlace(entity, rollTarget, gameManager);
         }
         if ((md.getLastStepMovementType() == EntityMovementType.MOVE_SPRINT)
                 && (md.hasActiveMASC() || md.hasActiveSupercharger()) && entity.canFall()) {
-            gameManager.doSkillCheckInPlace(entity, entity.getBasePilotingRoll(EntityMovementType.MOVE_SPRINT));
+            gameManager.utilityManager.doSkillCheckInPlace(entity, entity.getBasePilotingRoll(EntityMovementType.MOVE_SPRINT), gameManager);
         }
 
         if (entity.isAirborne() && entity.isAero()) {
@@ -3579,29 +3579,29 @@ public class EntityActionManager {
             // check for damaged criticals
             rollTarget = entity.checkLandingWithDamage(overallMoveType);
             if (rollTarget.getValue() != TargetRoll.CHECK_FALSE) {
-                gameManager.doSkillCheckInPlace(entity, rollTarget);
+                gameManager.utilityManager.doSkillCheckInPlace(entity, rollTarget, gameManager);
             }
 
             // check for prototype JJs
             rollTarget = entity.checkLandingWithPrototypeJJ(overallMoveType);
             if (rollTarget.getValue() != TargetRoll.CHECK_FALSE) {
-                gameManager.doSkillCheckInPlace(entity, rollTarget);
+                gameManager.utilityManager.doSkillCheckInPlace(entity, rollTarget, gameManager);
             }
 
             // check for jumping into heavy woods
             if (gameManager.game.getOptions().booleanOption(OptionsConstants.ADVGRNDMOV_PSR_JUMP_HEAVY_WOODS)) {
                 rollTarget = entity.checkLandingInHeavyWoods(overallMoveType, curHex);
                 if (rollTarget.getValue() != TargetRoll.CHECK_FALSE) {
-                    gameManager.doSkillCheckInPlace(entity, rollTarget);
+                    gameManager.utilityManager.doSkillCheckInPlace(entity, rollTarget, gameManager);
                 }
             }
 
             // Mechanical jump boosters fall damage
             if (md.shouldMechanicalJumpCauseFallDamage()) {
-                gameManager.vPhaseReport.addAll(gameManager.doEntityFallsInto(entity,
+                gameManager.vPhaseReport.addAll(gameManager.utilityManager.doEntityFallsInto(entity,
                         entity.getElevation(), md.getJumpPathHighestPoint(),
                         curPos, entity.getBasePilotingRoll(overallMoveType),
-                        false, entity.getJumpMP()));
+                        false, entity.getJumpMP(), gameManager));
             }
 
             // jumped into water?
@@ -3625,7 +3625,7 @@ public class EntityActionManager {
                         // TacOps: immediate PSR with +4 for terrain. If you
                         // fall then may break the ice after all
                         rollTarget = entity.checkLandingOnIce(overallMoveType, curHex);
-                        if (!gameManager.doSkillCheckInPlace(entity, rollTarget)) {
+                        if (!gameManager.utilityManager.doSkillCheckInPlace(entity, rollTarget, gameManager)) {
                             // apply damage now, or it will show up as a
                             // possible breach, if ice is broken
                             entity.applyDamage();
@@ -3651,14 +3651,14 @@ public class EntityActionManager {
                     // For falling elevation, Entity must not on hex surface
                     int currElevation = entity.getElevation();
                     entity.setElevation(0);
-                    boolean success = gameManager.doSkillCheckInPlace(entity, rollTarget);
+                    boolean success = gameManager.utilityManager.doSkillCheckInPlace(entity, rollTarget, gameManager);
                     if (success) {
                         entity.setElevation(currElevation);
                     }
                 }
                 if (waterLevel > 1) {
                     // Any swarming infantry will be destroyed.
-                    gameManager.drownSwarmer(entity, curPos);
+                    gameManager.utilityManager.drownSwarmer(entity, curPos, gameManager);
                 }
             }
 
@@ -3669,7 +3669,7 @@ public class EntityActionManager {
             if ((useBlackIce && goodTemp) || goodWeather) {
                 if (ServerHelper.checkEnteringBlackIce(gameManager, curPos, curHex, useBlackIce, goodTemp, goodWeather)) {
                     rollTarget = entity.checkLandingOnBlackIce(overallMoveType, curHex);
-                    if (!gameManager.doSkillCheckInPlace(entity, rollTarget)) {
+                    if (!gameManager.utilityManager.doSkillCheckInPlace(entity, rollTarget, gameManager)) {
                         entity.applyDamage();
                     }
                 }
@@ -3705,8 +3705,8 @@ public class EntityActionManager {
                                 curHex.getBogDownModifier(entity.getMovementMode(),
                                         entity instanceof LargeSupportTank),
                                 "avoid bogging down"));
-                        if (0 < gameManager.doSkillCheckWhileMoving(entity, entity.getElevation(), curPos, curPos,
-                                rollTarget, false)) {
+                        if (0 < gameManager.utilityManager.doSkillCheckWhileMoving(entity, entity.getElevation(), curPos, curPos,
+                                rollTarget, false, gameManager)) {
                             entity.setStuck(true);
                             r = new Report(2081);
                             r.add(entity.getDisplayName());
@@ -3794,7 +3794,7 @@ public class EntityActionManager {
             } // End try-to-dislodge-swarmers
 
             // one more check for inferno wash-off
-            gameManager.checkForWashedInfernos(entity, curPos);
+            gameManager.utilityManager.checkForWashedInfernos(entity, curPos, gameManager);
 
             // a jumping tank needs to roll for movement damage
             if (entity instanceof Tank) {
@@ -3871,8 +3871,8 @@ public class EntityActionManager {
         }
 
         // update entity's locations' exposure
-        gameManager.vPhaseReport.addAll(gameManager.doSetLocationsExposure(entity,
-                gameManager.game.getBoard().getHex(curPos), false, entity.getElevation()));
+        gameManager.vPhaseReport.addAll(gameManager.utilityManager.doSetLocationsExposure(entity,
+                gameManager.game.getBoard().getHex(curPos), false, entity.getElevation(), gameManager));
 
         // Check the falls_end_movement option to see if it should be able to
         // move on.
@@ -3925,8 +3925,8 @@ public class EntityActionManager {
                     if (hex.containsTerrain(Terrains.BLDG_ELEV)) {
                         Building bldg = gameManager.game.getBoard().getBuildingAt(entity.getPosition());
                         entity.setElevation(hex.terrainLevel(Terrains.BLDG_ELEV));
-                        gameManager.addAffectedBldg(bldg, gameManager.checkBuildingCollapseWhileMoving(bldg,
-                                entity, entity.getPosition()));
+                        gameManager.environmentalEffectManager.addAffectedBldg(bldg, gameManager.checkBuildingCollapseWhileMoving(bldg,
+                                entity, entity.getPosition()), gameManager);
                     } else if (entity.isLocationProhibited(entity.getPosition(), 0)
                             && !hex.hasPavement()) {
                         // crash
@@ -3952,8 +3952,8 @@ public class EntityActionManager {
                         Coords targetDest = Compute.getValidDisplacement(gameManager.game,
                                 violation.getId(), entity.getPosition(), 0);
                         if (targetDest != null) {
-                            gameManager.vPhaseReport.addAll(gameManager.doEntityDisplacement(violation,
-                                    entity.getPosition(), targetDest, prd));
+                            gameManager.vPhaseReport.addAll(gameManager.utilityManager.doEntityDisplacement(violation,
+                                    entity.getPosition(), targetDest, prd, gameManager));
                             // Update the violating entity's position on the
                             // client.
                             gameManager.entityUpdate(violation.getId());
@@ -4694,8 +4694,8 @@ public class EntityActionManager {
                     } else {
                         entity.setPosition(nextPos);
                         entity.setElevation(0);
-                        gameManager.reportManager.addReport(gameManager.doEntityDisplacementMinefieldCheck(entity,
-                                curPos, nextPos, nextElevation), gameManager);
+                        gameManager.reportManager.addReport(gameManager.utilityManager.doEntityDisplacementMinefieldCheck(entity,
+                                curPos, nextPos, nextElevation, gameManager), gameManager);
                     }
                     break;
 
@@ -4771,9 +4771,9 @@ public class EntityActionManager {
             else if ( (curAltitude > (nextAltitude + entity.getMaxElevationChange())
                     || (curHex.hasCliffTopTowards(nextHex) && curAltitude > nextAltitude) )
                     && !(entity.getMovementMode() == EntityMovementMode.WIGE && elevation > curHex.ceiling())) {
-                gameManager.reportManager.addReport(gameManager.doEntityFallsInto(entity, entity.getElevation(), curPos, nextPos,
-                        entity.getBasePilotingRoll(moveType), true), gameManager);
-                gameManager.reportManager.addReport(gameManager.doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, nextElevation), gameManager);
+                gameManager.reportManager.addReport(gameManager.utilityManager.doEntityFallsInto(entity, entity.getElevation(), curPos, nextPos,
+                        entity.getBasePilotingRoll(moveType), true, gameManager), gameManager);
+                gameManager.reportManager.addReport(gameManager.utilityManager.doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, nextElevation, gameManager), gameManager);
                 // Stay in the current hex and stop skidding.
                 break;
             }
@@ -5027,7 +5027,7 @@ public class EntityActionManager {
 
                     entity.setPosition(nextPos);
                     entity.setElevation(nextElevation);
-                    gameManager.reportManager.addReport(gameManager.doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, nextElevation), gameManager);
+                    gameManager.reportManager.addReport(gameManager.utilityManager.doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, nextElevation, gameManager), gameManager);
                     curPos = nextPos;
                 } // End buildings-suffer-too
 
@@ -5048,7 +5048,7 @@ public class EntityActionManager {
                         buildings.add(bldg);
                         gameManager.communicationManager.sendChangedBuildings(buildings, gameManager);
                     }
-                    gameManager.addAffectedBldg(bldg, gameManager.checkBuildingCollapseWhileMoving(bldg, entity, nextPos));
+                    gameManager.environmentalEffectManager.addAffectedBldg(bldg, gameManager.checkBuildingCollapseWhileMoving(bldg, entity, nextPos), gameManager);
                 } else {
                     // otherwise it collapses immediately on our head
                     gameManager.checkForCollapse(bldg, gameManager.game.getPositionMap(), nextPos, true, gameManager.vPhaseReport);
@@ -5063,7 +5063,7 @@ public class EntityActionManager {
             // Update entity position and elevation
             entity.setPosition(nextPos);
             entity.setElevation(nextElevation);
-            gameManager.reportManager.addReport(gameManager.doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, nextElevation), gameManager);
+            gameManager.reportManager.addReport(gameManager.utilityManager.doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, nextElevation, gameManager), gameManager);
             skidDistance++;
 
             // Check for collapse of any building the entity might be on
@@ -5146,8 +5146,8 @@ public class EntityActionManager {
                     // target gets displaced, because of low elevation
                     Coords targetDest = Compute.getValidDisplacement(gameManager.game, entity.getId(), curPos,
                             direction);
-                    gameManager.reportManager.addReport(gameManager.doEntityDisplacement(violation, curPos, targetDest,
-                            new PilotingRollData(violation.getId(), 0, "domino effect")), gameManager);
+                    gameManager.reportManager.addReport(gameManager.utilityManager.doEntityDisplacement(violation, curPos, targetDest,
+                            new PilotingRollData(violation.getId(), 0, "domino effect"), gameManager), gameManager);
                     // Update the violating entity's position on the client.
                     gameManager.entityUpdate(violation.getId());
                 }
@@ -5195,8 +5195,8 @@ public class EntityActionManager {
             r.indent();
             r.newlines = 0;
             gameManager.addReport(r);
-            gameManager.reportManager.addReport(gameManager.doEntityDisplacement(target, curPos, nextPos, null), gameManager);
-            gameManager.reportManager.addReport(gameManager.doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, entity.getElevation()), gameManager);
+            gameManager.reportManager.addReport(gameManager.utilityManager.doEntityDisplacement(target, curPos, nextPos, null, gameManager), gameManager);
+            gameManager.reportManager.addReport(gameManager.utilityManager.doEntityDisplacementMinefieldCheck(entity, curPos, nextPos, entity.getElevation(), gameManager), gameManager);
             target = Compute.stackingViolation(gameManager.game, entity.getId(), curPos, entity.climbMode());
         }
 
@@ -5745,11 +5745,11 @@ public class EntityActionManager {
                     // entity displacement
                     Coords dest = Compute.getValidDisplacement(gameManager.game, victim.getId(), hitCoords, direction);
                     if (null != dest) {
-                        gameManager.doEntityDisplacement(
+                        gameManager.utilityManager.doEntityDisplacement(
                                 victim,
                                 hitCoords,
                                 dest,
-                                new PilotingRollData(victim.getId(), 0, "crash"));
+                                new PilotingRollData(victim.getId(), 0, "crash"), gameManager);
                     } else if (!(victim instanceof Dropship)) {
                         // destroy entity - but not DropShips which are immovable
                         gameManager.reportManager.addReport(gameManager.entityActionManager.destroyEntity(victim, "impossible displacement",
@@ -5817,7 +5817,7 @@ public class EntityActionManager {
             Coords dest = Compute.getValidDisplacement(gameManager.game, entity.getId(), c,
                     Compute.d6() - 1);
             if (null != dest) {
-                gameManager.doEntityDisplacement(entity, c, dest, null);
+                gameManager.utilityManager.doEntityDisplacement(entity, c, dest, null, gameManager);
             } else {
                 // ack! automatic death! Tanks
                 // suffer an ammo/power plant hit.
@@ -6587,7 +6587,7 @@ public class EntityActionManager {
         }
         PilotingRollData psr = lam.checkAirMechLanding();
         if (psr.getValue() != TargetRoll.CHECK_FALSE
-                && (0 > gameManager.doSkillCheckWhileMoving(lam, elevation, pos, pos, psr, false))) {
+                && (0 > gameManager.utilityManager.doSkillCheckWhileMoving(lam, elevation, pos, pos, psr, false, gameManager))) {
             gameManager.entityActionManager.crashAirMech(lam, pos, elevation, distance, psr, vDesc, gameManager);
         }
         return vDesc;
@@ -6606,7 +6606,7 @@ public class EntityActionManager {
 
     protected boolean crashAirMech(Entity en, Coords pos, int elevation, int distance,
                                    PilotingRollData psr, MoveStep lastStep, Vector<Report> vDesc, GameManager gameManager) {
-        vDesc.addAll(gameManager.doEntityFallsInto(en, elevation, pos, pos, psr, true, 0));
+        vDesc.addAll(gameManager.utilityManager.doEntityFallsInto(en, elevation, pos, pos, psr, true, 0, gameManager));
         return en.isDoomed()
                 || processSkid(en, pos, 0, 0, distance, lastStep, en.moved, false, gameManager);
     }
@@ -6645,7 +6645,7 @@ public class EntityActionManager {
         }
         PilotingRollData psr = en.checkGliderLanding();
         if ((psr.getValue() != TargetRoll.CHECK_FALSE)
-                && (0 > gameManager.doSkillCheckWhileMoving(en, startElevation, pos, pos, psr, false))) {
+                && (0 > gameManager.utilityManager.doSkillCheckWhileMoving(en, startElevation, pos, pos, psr, false, gameManager))) {
             for (int i = 0; i < en.getNumberOfCriticals(Protomech.LOC_LEG); i++) {
                 en.getCritical(Protomech.LOC_LEG, i).setHit(true);
             }
@@ -6908,7 +6908,7 @@ public class EntityActionManager {
             }
 
             // check for location exposure
-            vDesc.addAll(gameManager.doSetLocationsExposure(en, fallHex, false, newElevation));
+            vDesc.addAll(gameManager.utilityManager.doSetLocationsExposure(en, fallHex, false, newElevation, gameManager));
 
         } else {
             en.setElevation(0);// considered landed in the hex.
@@ -6950,10 +6950,10 @@ public class EntityActionManager {
 
         if (gameManager.game.containsMinefield(crashPos)) {
             // may set off any minefields in the hex
-            gameManager.enterMinefield(en, crashPos, 0, true, vDesc, 7);
+            gameManager.environmentalEffectManager.enterMinefield(en, crashPos, 0, true, vDesc, 7, gameManager);
             // it may also clear any minefields that it detonated
-            gameManager.clearDetonatedMines(crashPos, 5);
-            gameManager.resetMines();
+            gameManager.environmentalEffectManager.clearDetonatedMines(crashPos, 5, gameManager);
+            gameManager.environmentalEffectManager.resetMines(gameManager);
         }
 
         return vDesc;
