@@ -88,7 +88,7 @@ public class SeeAllCommand extends ServerCommand {
                             + server.getPlayer(connId).getName());
                 }
 
-                gameManager.setSeeAll(player, !has_see_all);
+                gameManager.playerManager.setSeeAll(player, !has_see_all, gameManager);
                 gameManager.communicationManager.sendEntities(playerId, gameManager);
             } catch (Exception ex) {
                 server.sendServerChat("/seeall : seeall failed. Type /who for a list of players with id #s.");

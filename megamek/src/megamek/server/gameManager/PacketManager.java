@@ -469,47 +469,47 @@ public class PacketManager {
                 break;
             case ENTITY_ADD:
                 gameManager.communicationManager.receiveEntityAdd(packet, connId, gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case ENTITY_UPDATE:
                 gameManager.communicationManager.receiveEntityUpdate(packet, connId, gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case ENTITY_MULTIUPDATE:
                 gameManager.communicationManager.receiveEntitiesUpdate(packet, connId, gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case ENTITY_ASSIGN:
                 ServerLobbyHelper.receiveEntitiesAssign(packet, connId, gameManager.getGame(), gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case FORCE_UPDATE:
                 ServerLobbyHelper.receiveForceUpdate(packet, connId, gameManager.getGame(), gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case FORCE_ADD:
                 ServerLobbyHelper.receiveForceAdd(packet, connId, gameManager.getGame(), gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case FORCE_DELETE:
                 gameManager.communicationManager.receiveForcesDelete(packet, connId, gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case FORCE_PARENT:
                 ServerLobbyHelper.receiveForceParent(packet, connId, gameManager.getGame(), gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case FORCE_ADD_ENTITY:
                 ServerLobbyHelper.receiveAddEntititesToForce(packet, connId, gameManager.getGame(), gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case FORCE_ASSIGN_FULL:
                 ServerLobbyHelper.receiveForceAssignFull(packet, connId, gameManager.getGame(), gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case ENTITY_LOAD:
                 gameManager.communicationManager.receiveEntityLoad(packet, connId, gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case ENTITY_MODECHANGE:
                 gameManager.communicationManager.receiveEntityModeChange(packet, connId, gameManager);
@@ -540,7 +540,7 @@ public class PacketManager {
                 break;
             case ENTITY_REMOVE:
                 gameManager.communicationManager.receiveEntityDelete(packet, connId, gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case ENTITY_WORDER_UPDATE:
                 Object[] data = packet.getData();
@@ -560,7 +560,7 @@ public class PacketManager {
                 break;
             case SENDING_GAME_SETTINGS:
                 if (gameManager.communicationManager.receiveGameOptions(packet, connId, gameManager)) {
-                    gameManager.resetPlayersDone();
+                    gameManager.playerManager.resetPlayersDone(gameManager);
                     gameManager.communicationManager.send(createGameSettingsPacket(gameManager));
                     gameManager.communicationManager.receiveGameOptionsAux(packet, connId, gameManager);
                 }
@@ -576,7 +576,7 @@ public class PacketManager {
                     mapSettings.removeUnavailable();
                     mapSettings.setNullBoards(GameManager.DEFAULT_BOARD);
                     gameManager.game.setMapSettings(mapSettings);
-                    gameManager.resetPlayersDone();
+                    gameManager.playerManager.resetPlayersDone(gameManager);
                     gameManager.communicationManager.send(gameManager.communicationManager.packetManager.createMapSettingsPacket(gameManager));
                 }
                 break;
@@ -591,7 +591,7 @@ public class PacketManager {
                     mapSettings.removeUnavailable();
                     mapSettings.setNullBoards(GameManager.DEFAULT_BOARD);
                     gameManager.game.setMapSettings(mapSettings);
-                    gameManager.resetPlayersDone();
+                    gameManager.playerManager.resetPlayersDone(gameManager);
                     gameManager.communicationManager.send(gameManager.communicationManager.packetManager.createMapSettingsPacket(gameManager));
                 }
                 break;
@@ -600,7 +600,7 @@ public class PacketManager {
                     PlanetaryConditions conditions = (PlanetaryConditions) packet.getObject(0);
                     gameManager.communicationManager.sendServerChat(player + " changed planetary conditions");
                     gameManager.game.setPlanetaryConditions(conditions);
-                    gameManager.resetPlayersDone();
+                    gameManager.playerManager.resetPlayersDone(gameManager);
                     gameManager.communicationManager.send(createPlanetaryConditionsPacket(gameManager));
                 }
                 break;
@@ -612,11 +612,11 @@ public class PacketManager {
                 break;
             case CUSTOM_INITIATIVE:
                 gameManager.communicationManager.receiveCustomInit(packet, connId, gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case SQUADRON_ADD:
                 gameManager.communicationManager.receiveSquadronAdd(packet, connId, gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 break;
             case RESET_ROUND_DEPLOYMENT:
                 gameManager.game.setupRoundDeployment();

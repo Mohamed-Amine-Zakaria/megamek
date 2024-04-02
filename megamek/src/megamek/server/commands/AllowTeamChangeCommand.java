@@ -45,7 +45,7 @@ public class AllowTeamChangeCommand extends ServerCommand {
     public void run(int connId, String[] args) {
         Player player = server.getPlayer(connId);
 
-        if (!gameManager.isTeamChangeRequestInProgress()) {
+        if (!gameManager.playerManager.isTeamChangeRequestInProgress(gameManager)) {
             server.sendServerChat(connId, "No vote to change teams in progress!");
             return;
         }
@@ -73,8 +73,8 @@ public class AllowTeamChangeCommand extends ServerCommand {
 
         // Inform all players about the vote
         server.sendServerChat(player.getName() + " has voted to allow "
-                + gameManager.getPlayerRequestingTeamChange().getName()
-                + " to join Team " + gameManager.getRequestedTeam()
+                + gameManager.playerManager.getPlayerRequestingTeamChange(gameManager).getName()
+                + " to join Team " + gameManager.playerManager.getRequestedTeam(gameManager)
                 + ", " + voteCount
                 + " vote(s) received out of " + eligiblePlayerCount
                 + " vote(s) needed");
@@ -82,8 +82,8 @@ public class AllowTeamChangeCommand extends ServerCommand {
         // If all votes are received, perform team change
         if (changeTeam) {
             server.sendServerChat("All votes received, "
-                    + gameManager.getPlayerRequestingTeamChange().getName()
-                    + " will join Team " + gameManager.getRequestedTeam()
+                    + gameManager.playerManager.getPlayerRequestingTeamChange(gameManager).getName()
+                    + " will join Team " + gameManager.playerManager.getRequestedTeam(gameManager)
                     + " at the end of the turn.");
             gameManager.playerManager.allowTeamChange(gameManager);
         }

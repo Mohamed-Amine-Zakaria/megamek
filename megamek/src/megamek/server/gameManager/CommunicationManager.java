@@ -79,7 +79,7 @@ public class CommunicationManager {
                     send(connId, gameManager.packetManager.createFullEntitiesPacket(gameManager));
                 }
 
-                gameManager.setPlayerDone(player, gameManager.getGame().getEntitiesOwnedBy(player) <= 0);
+                gameManager.playerManager.setPlayerDone(player, gameManager.getGame().getEntitiesOwnedBy(player) <= 0, gameManager);
                 send(connId, new Packet(PacketCommand.PHASE_CHANGE, gameManager.getGame().getPhase()));
             }
 

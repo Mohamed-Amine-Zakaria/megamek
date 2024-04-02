@@ -48,7 +48,7 @@ public class AllowGameMasterCommand extends ServerCommand {
     public void run(int connId, String[] args) {
         Player player = server.getPlayer(connId);
 
-        if (!gameManager.isGameMasterRequestInProgress()) {
+        if (!gameManager.playerManager.isGameMasterRequestInProgress(gameManager)) {
             server.sendServerChat(connId, "No vote to for Game Master is progess!");
             return;
         }
@@ -76,7 +76,7 @@ public class AllowGameMasterCommand extends ServerCommand {
 
         // Inform all players about the vote
         server.sendServerChat(player.getName() + " has voted to allow "
-                + gameManager.getPlayerRequestingGameMaster().getName()
+                + gameManager.playerManager.getPlayerRequestingGameMaster(gameManager).getName()
                 + " to become Game Master"
                 + ", " + voteCount
                 + " vote(s) received out of " + eligiblePlayerCount
@@ -85,7 +85,7 @@ public class AllowGameMasterCommand extends ServerCommand {
         // If all votes are received, perform team change
         if (allowGameMaster) {
             server.sendServerChat("All votes received, "
-                    + gameManager.getPlayerRequestingGameMaster().getName()
+                    + gameManager.playerManager.getPlayerRequestingGameMaster(gameManager).getName()
                     + " will become Game Master.");
             gameManager.playerManager.processGameMasterRequest(gameManager);
         }

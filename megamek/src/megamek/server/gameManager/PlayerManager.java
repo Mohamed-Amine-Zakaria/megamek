@@ -6,6 +6,7 @@ import megamek.common.Player;
 import megamek.common.force.Forces;
 import megamek.common.net.enums.PacketCommand;
 import megamek.common.net.packets.Packet;
+import megamek.common.options.OptionsConstants;
 import megamek.server.ServerLobbyHelper;
 import org.apache.logging.log4j.LogManager;
 
@@ -99,7 +100,7 @@ public class PlayerManager {
             // Prevent situation where all players but the disconnected one
             // are done, and the disconnecting player causes the game to start
             if (gameManager.getGame().getPhase().isLounge()) {
-                gameManager.resetActivePlayersDone();
+                gameManager.playerManager.resetActivePlayersDone(gameManager);
             }
         } else {
             player.setGhost(true);
@@ -172,5 +173,80 @@ public class PlayerManager {
         gameManager.requestedTeam = team;
         gameManager.playerChangingTeam = player;
         gameManager.changePlayersTeam = false;
+    }
+
+    public boolean isGameMasterRequestInProgress(GameManager gameManager) {
+        return gameManager.playerRequestingGameMaster != null;
+    }
+
+    public Player getPlayerRequestingGameMaster(GameManager gameManager) {
+        return gameManager.playerRequestingGameMaster;
+    }
+
+    public void setSingleBlind(Player player, boolean singleBlind, GameManager gameManager) {
+        player.setSingleBlind(singleBlind);
+        gameManager.communicationManager.transmitPlayerUpdate(player);
+        gameManager.communicationManager.sendServerChat(player.getName() + " set SingleBlind: " + player.getSingleBlind());
+    }
+
+    public void setSeeAll(Player player, boolean seeAll, GameManager gameManager) {
+        player.setSeeAll(seeAll);
+        gameManager.communicationManager.transmitPlayerUpdate(player);
+        gameManager.communicationManager.sendServerChat(player.getName() + " set SeeAll: " + player.getSeeAll());
+    }
+
+    public boolean isTeamChangeRequestInProgress(GameManager gameManager) {
+        return gameManager.playerChangingTeam != null;
+    }
+
+    public Player getPlayerRequestingTeamChange(GameManager gameManager) {
+        return gameManager.playerChangingTeam;
+    }
+
+    public int getRequestedTeam(GameManager gameManager) {
+        return gameManager.requestedTeam;
+    }
+
+    protected void setPlayerDone(Player player, boolean normalDone, GameManager gameManager) {
+        if (gameManager.getGame().getPhase().isReport()
+                && gameManager.getGame().getOptions().booleanOption(OptionsConstants.BASE_GM_CONTROLS_DONE_REPORT_PHASE)
+                && gameManager.getGame().getPlayersList().stream().filter(p -> p.isGameMaster()).count() > 0) {
+            if (player.isGameMaster()) {
+                player.setDone(false);
+            } else {
+                player.setDone(true);
+            }
+        } else {
+            player.setDone(normalDone);
+        }
+    }
+
+    /**
+     * Called at the beginning of certain phases to make every player not ready.
+     * @param gameManager
+     */
+    void resetPlayersDone(GameManager gameManager) {
+        if ((gameManager.getGame().getPhase().isReport()) && (!gameManager.getGame().getPhase().isVictory())) {
+            return;
+        }
+
+        for (Player player : gameManager.game.getPlayersList()) {
+            setPlayerDone(player, false, gameManager);
+        }
+
+        gameManager.communicationManager.transmitAllPlayerDones(gameManager);
+    }
+
+    /**
+     * Called at the beginning of certain phases to make every active player not
+     * ready.
+     * @param gameManager
+     */
+    protected void resetActivePlayersDone(GameManager gameManager) {
+        for (Player player : gameManager.game.getPlayersList()) {
+            setPlayerDone(player, gameManager.getGame().getEntitiesOwnedBy(player) <= 0, gameManager);
+        }
+
+        gameManager.communicationManager.transmitAllPlayerDones(gameManager);
     }
 }

@@ -190,41 +190,9 @@ public class GameManager implements IGameManager {
         playerRequestingGameMaster = player;
     }
 
-    public boolean isGameMasterRequestInProgress() {
-        return playerRequestingGameMaster != null;
-    }
-
-    public Player getPlayerRequestingGameMaster() {
-        return playerRequestingGameMaster;
-    }
-
-    public void setSingleBlind(Player player, boolean singleBlind) {
-        player.setSingleBlind(singleBlind);
-        communicationManager.transmitPlayerUpdate(player);
-        communicationManager.sendServerChat(player.getName() + " set SingleBlind: " + player.getSingleBlind());
-    }
-
-    public void setSeeAll(Player player, boolean seeAll) {
-        player.setSeeAll(seeAll);
-        communicationManager.transmitPlayerUpdate(player);
-        communicationManager.sendServerChat(player.getName() + " set SeeAll: " + player.getSeeAll());
-    }
-
     @Override
     public void requestTeamChange(int team, Player player) {
         playerManager.changeTeam(team, player, this);
-    }
-
-    public boolean isTeamChangeRequestInProgress() {
-        return playerChangingTeam != null;
-    }
-
-    public Player getPlayerRequestingTeamChange() {
-        return playerChangingTeam;
-    }
-
-    public int getRequestedTeam() {
-        return requestedTeam;
     }
 
     /**
@@ -311,47 +279,6 @@ public class GameManager implements IGameManager {
     @Override
     public void handlePacket(int connId, Packet packet) {
         packetManager.packetHandler(connId,packet, this);
-    }
-
-    protected void setPlayerDone(Player player, boolean normalDone) {
-        if (getGame().getPhase().isReport()
-                && getGame().getOptions().booleanOption(OptionsConstants.BASE_GM_CONTROLS_DONE_REPORT_PHASE)
-                && getGame().getPlayersList().stream().filter(p -> p.isGameMaster()).count() > 0) {
-            if (player.isGameMaster()) {
-                player.setDone(false);
-            } else {
-                player.setDone(true);
-            }
-        } else {
-            player.setDone(normalDone);
-        }
-    }
-
-    /**
-     * Called at the beginning of certain phases to make every player not ready.
-     */
-    void resetPlayersDone() {
-        if ((getGame().getPhase().isReport()) && (!getGame().getPhase().isVictory())) {
-            return;
-        }
-
-        for (Player player : game.getPlayersList()) {
-            setPlayerDone(player, false);
-        }
-
-        communicationManager.transmitAllPlayerDones(this);
-    }
-
-    /**
-     * Called at the beginning of certain phases to make every active player not
-     * ready.
-     */
-    protected void resetActivePlayersDone() {
-        for (Player player : game.getPlayersList()) {
-            setPlayerDone(player, getGame().getEntitiesOwnedBy(player) <= 0);
-        }
-
-        communicationManager.transmitAllPlayerDones(this);
     }
 
 

@@ -355,7 +355,7 @@ public class GameStateManager {
     void executePhase(GamePhase phase, GameManager gameManager) {
         switch (phase) {
             case EXCHANGE:
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 // Update initial BVs, as things may have been modified in lounge
                 for (Entity e : gameManager.game.getEntitiesVector()) {
                     e.setInitialBV(e.calculateBattleValue(false, false));
@@ -429,7 +429,7 @@ public class GameStateManager {
                 gameManager.communicationManager.transmitAllPlayerUpdates(gameManager);
 
                 // roll 'em
-                gameManager.resetActivePlayersDone();
+                gameManager.playerManager.resetActivePlayersDone(gameManager);
                 gameManager.gameStateManager.rollInitiative(gameManager);
                 //Cockpit command consoles that switched crew on the previous round are ineligible for force
                 // commander initiative bonus. Now that initiative is rolled, clear the flag.
@@ -461,7 +461,7 @@ public class GameStateManager {
             case DEPLOY_MINEFIELDS:
                 gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.communicationManager.transmitAllPlayerUpdates(gameManager);
-                gameManager.resetActivePlayersDone();
+                gameManager.playerManager.resetActivePlayersDone(gameManager);
                 gameManager.setIneligible(phase);
 
                 Enumeration<Player> e = gameManager.game.getPlayers();
@@ -483,7 +483,7 @@ public class GameStateManager {
                 gameManager.entityActionManager.deployOffBoardEntities(gameManager);
                 gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.communicationManager.transmitAllPlayerUpdates(gameManager);
-                gameManager.resetActivePlayersDone();
+                gameManager.playerManager.resetActivePlayersDone(gameManager);
                 gameManager.setIneligible(phase);
 
                 Enumeration<Player> players = gameManager.game.getPlayers();
@@ -542,7 +542,7 @@ public class GameStateManager {
                 gameManager.entityActionManager.resetEntityPhase(phase, gameManager);
                 gameManager.playerManager.checkForObservers(gameManager);
                 gameManager.communicationManager.transmitAllPlayerUpdates(gameManager);
-                gameManager.resetActivePlayersDone();
+                gameManager.playerManager.resetActivePlayersDone(gameManager);
                 gameManager.setIneligible(phase);
                 gameManager.gameStateManager.determineTurnOrder(phase, gameManager);
                 gameManager.entityAllUpdate();
@@ -607,7 +607,7 @@ public class GameStateManager {
             case FIRING_REPORT:
             case PHYSICAL_REPORT:
             case END_REPORT:
-                gameManager.resetActivePlayersDone();
+                gameManager.playerManager.resetActivePlayersDone(gameManager);
                 gameManager.communicationManager.sendReport(gameManager);
                 gameManager.entityAllUpdate();
                 if (gameManager.game.getOptions().booleanOption(OptionsConstants.BASE_PARANOID_AUTOSAVE)) {
@@ -616,7 +616,7 @@ public class GameStateManager {
                 break;
             case VICTORY:
                 gameManager.ratingManager.updatePlayersRating(gameManager);
-                gameManager.resetPlayersDone();
+                gameManager.playerManager.resetPlayersDone(gameManager);
                 gameManager.reportManager.clearReports(gameManager);
                 gameManager.communicationManager.send(gameManager.packetManager.createAllReportsPacket(gameManager));
                 gameManager.reportManager.prepareVictoryReport(gameManager);
@@ -806,7 +806,7 @@ public class GameStateManager {
         }
 
         // reset all players
-        gameManager.resetPlayersDone();
+        gameManager.playerManager.resetPlayersDone(gameManager);
 
         // Write end of game to stdout so controlling scripts can rotate logs.
         LogManager.getLogger().info(LocalDateTime.now() + " END OF GAME");
@@ -1554,7 +1554,7 @@ public class GameStateManager {
 
         // Tactical Genius pilot special ability (lvl 3)
         if (gameManager.game.getNoOfInitiativeRerollRequests() > 0) {
-            gameManager.resetActivePlayersDone();
+            gameManager.playerManager.resetActivePlayersDone(gameManager);
             gameManager.game.rollInitAndResolveTies();
 
             determineTurnOrder(GamePhase.INITIATIVE, gameManager);
