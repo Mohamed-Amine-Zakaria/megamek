@@ -115,6 +115,7 @@ public class ChatLounge extends AbstractPhaseDisplay implements
     private JPanel panUnits = new JPanel();
     private JPanel panMap = new JPanel();
     private JPanel panTeam = new JPanel();
+    private JPanel panRanking = new JPanel();
 
     // Labels
     private JLabel lblMapSummary = new JLabel("");
@@ -230,6 +231,10 @@ public class ChatLounge extends AbstractPhaseDisplay implements
     private JButton butSaveMapSetup = new JButton(Messages.getString("ChatLounge.map.saveMapSetup") + " *");
     private JButton butLoadMapSetup = new JButton(Messages.getString("ChatLounge.map.loadMapSetup"));
 
+
+    /* Ranking Dashboard Panel */
+    private LeaderBoardPanel panLeaderRankView;
+
     /* Team Overview Panel */
     private TeamOverviewPanel panTeamOverview;
     JButton butDetach = new JButton(Messages.getString("ChatLounge.butDetach"));
@@ -279,12 +284,14 @@ public class ChatLounge extends AbstractPhaseDisplay implements
         panTabs.add(Messages.getString("ChatLounge.name.selectUnits"), panUnits);
         panTabs.add(Messages.getString("ChatLounge.name.SelectMap"), panMap);
         panTabs.add(Messages.getString("ChatLounge.name.teamOverview"), panTeam);
+        panTabs.add(Messages.getString("ChatLounge.name.rankingLeaderboard"), panRanking);
         p.add(panTabs, BorderLayout.CENTER);
         splitPaneMain.setTopComponent(p);
         add(splitPaneMain);
 
         setupSorters();
         setupTeamOverview();
+        setupRankingLeaderboard();
         setupPlayerConfig();
         refreshGameSettings();
         setupEntities();
@@ -425,6 +432,19 @@ public class ChatLounge extends AbstractPhaseDisplay implements
     };
 
 
+    private void setupRankingLeaderboard() {
+        panLeaderRankView = new LeaderBoardPanel(clientgui);
+        FixedYPanel panDetach = new FixedYPanel(new FlowLayout(FlowLayout.LEFT));
+       // panDetach.add(butDetach);
+
+        panRanking.setLayout(new BoxLayout(panRanking, BoxLayout.PAGE_AXIS));
+        panRanking.add(panDetach);
+        panRanking.add(panLeaderRankView);
+
+        // setup (but don't show) the detached team overview window
+        teamOverviewWindow = new ClientDialog(clientgui.frame, Messages.getString("ChatLounge.name.teamOverview"), false);
+        teamOverviewWindow.setSize(clientgui.frame.getWidth() / 2, clientgui.frame.getHeight() / 2);
+    }
     private void setupTeamOverview() {
         panTeamOverview = new TeamOverviewPanel(clientgui);
         FixedYPanel panDetach = new FixedYPanel(new FlowLayout(FlowLayout.LEFT));
