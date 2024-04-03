@@ -225,7 +225,8 @@ public class PlayerManager {
      * Called at the beginning of certain phases to make every player not ready.
      * @param gameManager
      */
-    void resetPlayersDone(GameManager gameManager) {
+    void
+    resetPlayersDone(GameManager gameManager) {
         if ((gameManager.getGame().getPhase().isReport()) && (!gameManager.getGame().getPhase().isVictory())) {
             return;
         }
