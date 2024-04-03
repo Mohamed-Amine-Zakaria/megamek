@@ -107,8 +107,8 @@ public final class Player extends TurnOrdered {
     public Player(int id, String name) {
         this.name = name;
         this.id = id;
-        this.rating = new PlayerRating(1500);
-
+       // this.rating = new PlayerRating(1500);
+//
     }
 
 

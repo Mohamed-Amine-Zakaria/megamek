@@ -23,7 +23,7 @@ public class RatingManager {
     public void processVictoryResults(Player winner, Player loser, VictoryResult victoryResult) {
 
         // Applique les changements de rating en fonction des scores obtenus dans le match.
-        winner.getRating().updateRating(victoryResult.getPlayerScore(winner.hashCode()), loser.getRating().getRating(), true);
+        winner.getRating().updateRating(victoryResult.getPlayerScore(winner.hashCode()) , loser.getRating().getRating(), true);
         loser.getRating().updateRating(victoryResult.getPlayerScore(loser.hashCode()), winner.getRating().getRating(), false);
     }
 

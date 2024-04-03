@@ -429,32 +429,6 @@ public abstract class BotClient extends Client {
     }
 
     private void runEndGame() {
-
-        GameEngine gameEngine = new GameEngine();
-        VictoryResult victoryResult = game.getVictoryResult();
-
-        if (victoryResult != null) {
-            // Process the victory to update the game state
-            List<Report> reports = victoryResult.processVictory(game);
-
-            // Assuming you're only dealing with individual players, not teams, for simplicity
-            int winningPlayerId = victoryResult.getWinningPlayer();
-            if (winningPlayerId != Player.PLAYER_NONE) {
-                // Assuming getPlayers() returns IDs of all players
-                for (int playerId : victoryResult.getPlayers()) {
-                    if (playerId != winningPlayerId) {
-                        Player winner = game.getPlayer(winningPlayerId);
-                        Player loser = game.getPlayer(playerId);
-
-                        // Update ratings here
-                        gameEngine.updatePlayerRatings(winner, loser, victoryResult);
-                        break; // Assuming one-on-one for this example
-                    }
-                }
-            }
-        }
-
-
         // Make a list of the player's living units.
         ArrayList<Entity> living = game.getPlayerEntities(getLocalPlayer(), false);
 
@@ -1314,23 +1288,5 @@ public abstract class BotClient extends Client {
     }
 }
 
-class GameEngine {
-    private RatingSystem ratingSystem = new EloRatingSystem();
 
-    public void updatePlayerRatings(Player winner, Player loser, VictoryResult victoryResult) {
-        double winnerRatingChange = ratingSystem.calculateRatingChange(
-                winner.getRating().getRating(),
-                loser.getRating().getRating(),
-                true
-        );
-        double loserRatingChange = ratingSystem.calculateRatingChange(
-                loser.getRating().getRating(),
-                winner.getRating().getRating(),
-                false
-        );
-
-        winner.getRating().updateRating(victoryResult.getPlayerScore(winner.hashCode()), loser.getRating().getRating(), true);
-        loser.getRating().updateRating(victoryResult.getPlayerScore(loser.hashCode()), winner.getRating().getRating(), false);
-    }
-}
 
