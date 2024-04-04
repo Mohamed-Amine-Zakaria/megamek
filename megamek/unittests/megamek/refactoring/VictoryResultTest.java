@@ -1,2 +1,4 @@
-package megamek.refactoring;public class VictoryResultTest {
+package megamek.refactoring;
+
+public class VictoryResultTest {
 }

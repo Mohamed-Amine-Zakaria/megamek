@@ -45,7 +45,7 @@ public final class Player extends TurnOrdered {
 
     private transient IGame game;
 
-    private PlayerRating rating;
+    //private PlayerRating rating;
 
 
     private String name;
@@ -102,6 +102,8 @@ public final class Player extends TurnOrdered {
     private transient boolean votedToAllowTeamChange = false;
     private transient boolean votedToAllowGameMaster = false;
     //endregion Variable Declarations
+
+    public PlayerRating rating = new PlayerRating(1500);
 
     //region Constructors
     public Player(int id, String name) {
