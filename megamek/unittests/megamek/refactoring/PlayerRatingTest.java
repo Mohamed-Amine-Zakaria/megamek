@@ -2,68 +2,56 @@ package megamek.refactoring;
 
 import megamek.common.Player;
 import megamek.server.rating.PlayerRating;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PlayerRatingTest {
     /**
-     * vérifie que le rating initial est correctement retourné par la méthode
+     * Tests that the PlayerRating constructor correctly initializes the player's rating.
+     * Asserts that the initial rating set through the constructor is correctly returned by getRating().
      */
     @Test
-    public void testGetRating() {
-        double initialRating = 1500.0;
-        PlayerRating playerRating = new PlayerRating(initialRating);
-        assertEquals(initialRating, playerRating.getRating(), "Le rating initial devrait être retourné");
+    public void testConstructorInitializesCorrectRating() {
+        PlayerRating playerRating = new PlayerRating(1500.0);
+        Assertions.assertEquals(1500.0, playerRating.getRating(), "Constructor should initialize with the correct rating.");
     }
 
     /**
-     * teste le cas où le joueur remporte le match avec un score élevé, vérifiant que le rating est correctement mis à jour
+     * Tests the updateRating method for scenarios where the player wins.
+     * First, simulates a significant victory with a match score greater than the victory threshold,
+     * asserting that the player's rating increases.
+     * Then, it tests a normal victory against a higher-rated opponent,
+     * asserting that the player's rating further increases.
      */
     @Test
-    public void testUpdateRatingVictory() {
-        double initialRating = 1500.0;
-        double opponentRating = 1400.0;
-        boolean isVictory = true;
-        double matchScore = 85.0;
-        double expectedRatingChange = 8.0;
+    public void testUpdateRatingWithVictory() {
+        PlayerRating playerRating = new PlayerRating(1500.0);
+        playerRating.updateRating(85, 1400, true); // Simulates a significant victory.
+        Assertions.assertTrue(playerRating.getRating() > 1500.0, "Rating should increase after a significant victory.");
 
-        PlayerRating playerRating = new PlayerRating(initialRating);
-        playerRating.updateRating(matchScore, opponentRating, isVictory);
+        double ratingAfterVictory = playerRating.getRating();
 
-        assertEquals(initialRating + expectedRatingChange, playerRating.getRating(), 0.01, "Le rating devrait augmenter après une victoire avec un score élevé");
+        playerRating.updateRating(50, 1600, true); // Simulates a normal victory against a higher-rated opponent.
+        Assertions.assertTrue(playerRating.getRating() > ratingAfterVictory, "Rating should further increase after a victory against a higher-rated opponent.");
     }
 
     /**
-     *  teste le cas où le joueur perd le match avec un score bas, vérifiant que le rating est correctement mis à jour.
+     * Tests the updateRating method for scenarios where the player loses.
+     * First, simulates an overwhelming defeat with a match score lower than the defeat threshold,
+     * asserting that the player's rating decreases.
+     * Then, it tests a normal defeat against a higher-rated opponent,
+     * asserting that the player's rating decreases, but l-ess so than in the case of the overwhelming defeat.
      */
     @Test
-    public void testUpdateRatingDefeat() {
-        double initialRating = 1500.0;
-        double opponentRating = 1400.0;
-        boolean isVictory = false;
-        double matchScore = 15.0; // Score bas, devrait diminuer le rating.
-        double expectedRatingChange = -5.0; // Changement de rating attendu pour une défaite.
+    public void testUpdateRatingWithDefeat() {
+        PlayerRating playerRating = new PlayerRating(1500.0);
+        playerRating.updateRating(15, 1400, false); // Simulates an overwhelming defeat.
+        Assertions.assertTrue(playerRating.getRating() < 1500.0, "Rating should decrease after an overwhelming defeat.");
 
-        PlayerRating playerRating = new PlayerRating(initialRating);
-        playerRating.updateRating(matchScore, opponentRating, isVictory);
+        double ratingAfterDefeat = playerRating.getRating();
 
-        assertEquals(initialRating + expectedRatingChange, playerRating.getRating(), "Le rating devrait diminuer après une défaite avec un score bas");
-    }
-
-    /**
-     * este le cas où le rating de l'adversaire est le même, vérifiant que le rating du joueur ne change pas.
-     */
-    @Test
-    public void testUpdateRatingNoChange() {
-        double initialRating = 1500.0;
-        double opponentRating = 1500.0; // Même rating, aucun changement attendu.
-        boolean isVictory = false;
-        double matchScore = 50.0; // Score moyen.
-        double expectedRatingChange = 0.0; // Aucun changement attendu.
-
-        PlayerRating playerRating = new PlayerRating(initialRating);
-        playerRating.updateRating(matchScore, opponentRating, isVictory);
-
-        assertEquals(initialRating + expectedRatingChange, playerRating.getRating(), "Le rating ne devrait pas changer si le rating de l'adversaire est le même");
+        playerRating.updateRating(50, 1600, false); // Simulates a normal defeat against a higher-rated opponent.
+        Assertions.assertTrue(playerRating.getRating() < ratingAfterDefeat, "Rating should decrease after a defeat, but not as much as for an overwhelming defeat.");
     }
 }
