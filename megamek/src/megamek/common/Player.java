@@ -103,7 +103,7 @@ public final class Player extends TurnOrdered {
     private transient boolean votedToAllowGameMaster = false;
     //endregion Variable Declarations
 
-    public PlayerRating rating = new PlayerRating(1500);
+    public PlayerRating rating;
 
     //region Constructors
     public Player(int id, String name) {
